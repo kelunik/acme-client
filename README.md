@@ -6,7 +6,7 @@
 `kelunik/acme-client` is a standalone ACME client written in PHP.
 It's an alternative for the [official client](https://github.com/letsencrypt/letsencrypt) which is written in python.
 
-> **Warning**: This software is under heavy development. Use at your own risk. Revocation is not yet supported by this client.
+> **Warning**: This software is under heavy development. Use at your own risk.
 
 ## Installation
 
@@ -17,6 +17,9 @@ composer install
 ```
 
 ## Usage
+
+> **Note**: This client stores all data in `./data`, be sure to backup this folder regularly.
+> It contains your account keys, domain keys and certificates.
 
 Before you can issue certificates, you have to register an account first and read and understand the terms of service of the ACME CA you're using.
 For Let's Encrypt there's a [subscriber agreement](https://letsencrypt.org/repository/) you have to accept.
@@ -42,3 +45,11 @@ sudo bin/acme issue \
 ```
 
 For renewal, just run this command again.
+
+To revoke a certificate, you need a valid account key currently, just like for issuance.
+
+```
+sudo bin/acme revoke \
+    --server acme-v01.api.letsencrypt.org/directory \
+    --cert data/live/example.com/cert.pem
+```
