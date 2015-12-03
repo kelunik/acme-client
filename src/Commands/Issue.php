@@ -48,7 +48,7 @@ class Issue implements Command {
 
         $domains = $args->get("domains");
         $domains = array_map("trim", explode(",", $domains));
-        $this->checkDnsRecords($domains);
+        yield from $this->checkDnsRecords($domains);
 
         $keyPair = $this->checkRegistration($args);
 
@@ -69,6 +69,7 @@ class Issue implements Command {
                 throw new AcmeException("Protocol Violation: Invalid Token!");
             }
 
+            $this->logger->debug("Generating payload...");
             $payload = $acme->generateHttp01Payload($token);
 
             $docRoot = rtrim($args->get("path") ?? __DIR__ . "/../../data/public", "/\\");
@@ -90,13 +91,20 @@ class Issue implements Command {
                 chown($docRoot . "/.well-known", $userInfo["uid"]);
                 chown($docRoot . "/.well-known/acme-challenge", $userInfo["uid"]);
 
+                $this->logger->info("Providing payload for {$domain} at {$path}/{$token}");
+
                 file_put_contents("{$path}/{$token}", $payload);
                 chown("{$path}/{$token}", $userInfo["uid"]);
                 chmod("{$path}/{$token}", 0660);
 
                 yield $acme->selfVerify($domain, $token, $payload);
+                $this->logger->info("Successfully self-verified challenge.");
+
                 yield $acme->answerChallenge($challenge->uri, $payload);
+                $this->logger->info("Answered challenge... waiting");
+
                 yield $acme->pollForChallenge($location);
+                $this->logger->info("Challenge successful. {$domain} is now authorized.");
 
                 @unlink("{$path}/{$token}");
             } catch (Throwable $e) {
@@ -116,6 +124,8 @@ class Issue implements Command {
             $private = file_get_contents($path . "/private.pem");
             $public = file_get_contents($path . "/public.pem");
 
+            $this->logger->info("Using existing domain key found at {$path}");
+
             $domainKeys = new KeyPair($private, $public);
         } else {
             $domainKeys = (new OpenSSLKeyGenerator)->generate(2048);
@@ -123,18 +133,26 @@ class Issue implements Command {
             file_put_contents($path . "/private.pem", $domainKeys->getPrivate());
             file_put_contents($path . "/public.pem", $domainKeys->getPublic());
 
+            $this->logger->info("Saved new domain key at {$path}");
+
             chmod($path . "/private.pem", 0600);
             chmod($path . "/public.pem", 0600);
         }
 
+        $this->logger->info("Requesting certificate ...");
+
         $location = yield $acme->requestCertificate($domainKeys, $domains);
         $certificates = yield $acme->pollForCertificate($location);
+
+        $this->logger->info("Saving certificate ...");
 
         file_put_contents($path . "/cert.pem", reset($certificates));
         file_put_contents($path . "/fullchain.pem", implode("\n", $certificates));
 
         array_shift($certificates);
         file_put_contents($path . "/chain.pem", implode("\n", $certificates));
+
+        $this->logger->info("Successfully issued certificate.");
     }
 
     private function checkDnsRecords($domains): Generator {
@@ -142,7 +160,7 @@ class Issue implements Command {
 
         foreach ($domains as $domain) {
             $promises[$domain] = dns\resolve($domain, [
-                "types" => Record::A,
+                "types" => [Record::A],
                 "hosts" => false,
             ]);
         }
@@ -152,6 +170,8 @@ class Issue implements Command {
         if (!empty($errors)) {
             throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(array_keys($errors)));
         }
+
+        $this->logger->info("Checked DNS records, all fine.");
     }
 
     private function checkRegistration(Manager $args) {
@@ -173,6 +193,8 @@ class Issue implements Command {
         if (file_exists($pathPrivate) && file_exists($pathPublic)) {
             $private = file_get_contents($pathPrivate);
             $public = file_get_contents($pathPublic);
+
+            $this->logger->info("Found account keys.");
 
             return new KeyPair($private, $public);
         }
