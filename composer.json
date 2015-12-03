@@ -1,0 +1,30 @@
+{
+    "name": "kelunik/acme-client",
+    "description": "Standalone PHP ACME client.",
+    "require": {
+        "php": ">=7.0.0",
+        "ext-posix": "*",
+        "ext-openssl": "*",
+        "amphp/aerys": "dev-master",
+        "bramus/monolog-colored-line-formatter": "^2",
+        "kelunik/acme": "dev-master",
+        "league/climate": "^3",
+        "monolog/monolog": "^1.17",
+        "psr/log": "^1",
+        "rdlowrey/auryn": "^1"
+    },
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Niklas Keller",
+            "email": "me@kelunik.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Kelunik\\AcmeClient\\": "src"
+        }
+    }
+}

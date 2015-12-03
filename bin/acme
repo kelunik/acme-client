@@ -1,0 +1,101 @@
+#!/usr/bin/env php
+<?php
+
+use Auryn\Injector;
+use Bramus\Monolog\Formatter\ColoredLineFormatter;
+use Kelunik\AcmeClient\LoggerColorScheme;
+use League\CLImate\CLImate;
+use Monolog\Handler\StreamHandler;
+use Monolog\Logger;
+
+require __DIR__ . "/../vendor/autoload.php";
+
+$help = <<<EOT
+
+      ____ __________ ___  ___
+     / __ `/ ___/ __ `__ \/ _ \
+    / /_/ / /__/ / / / / /  __/
+    \__,_/\___/_/ /_/ /_/\___/
+
+    Usage: bin/acme command --args
+
+    Available Commands:
+    bin/acme register
+    bin/acme issue
+    bin/acme revoke
+
+    Get more help by appending --help to specific commands.
+
+
+EOT;
+
+$commands = [
+    "issue" => "Kelunik\\AcmeClient\\Commands\\Issue",
+    "register" => "Kelunik\\AcmeClient\\Commands\\Register",
+    "revoke" => "Kelunik\\AcmeClient\\Commands\\Revoke",
+];
+
+$climate = new CLImate;
+$injector = new Injector;
+
+if (!isset($argv)) {
+    $climate->error("\$argv is not defined");
+    exit(1);
+}
+
+if (count($argv) === 1 || $argv[1] === "-h" || $argv[1] === "--help" || $argv[1] === "help") {
+    print $help;
+    exit(0);
+}
+
+if (!array_key_exists($argv[1], $commands)) {
+    $climate->error("Unknown command: '{$argv[1]}'");
+
+    exit(1);
+}
+
+try {
+    $climate->arguments->add($commands[$argv[1]]::getDefinition());
+    $climate->arguments->parse();
+} catch (Exception $e) {
+    if ($climate->arguments->defined("help")) {
+        print $help;
+
+        exit(0);
+    } else {
+        $climate->error($e->getMessage());
+
+        exit(1);
+    }
+}
+
+$handler = new StreamHandler("php://stdout", Logger::DEBUG);
+$handler->setFormatter(new ColoredLineFormatter(new LoggerColorScheme, null, null, true, true));
+
+$logger = new Logger("ACME");
+$logger->pushHandler($handler);
+
+$injector->alias("Psr\\Log\\LoggerInterface", Logger::class);
+$injector->share($logger);
+
+$command = $injector->make($commands[$argv[1]]);
+
+Amp\run(function () use ($command, $climate, $logger) {
+    try {
+        yield $command->execute($climate->arguments);
+    } catch (Throwable $e) {
+        $error = (string) $e;
+        $lines = explode("\n", $error);
+        $lines = array_filter($lines, function ($line) {
+            return strlen($line) && $line[0] !== "#" && $line !== "Stack trace:";
+        });
+
+        foreach ($lines as $line) {
+            $logger->error($line);
+        }
+
+        exit(1);
+    }
+
+    Amp\stop();
+});
