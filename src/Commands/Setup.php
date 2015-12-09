@@ -9,15 +9,19 @@ use Generator;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
-use Kelunik\Acme\KeyPair;
 use Kelunik\Acme\OpenSSLKeyGenerator;
 use Kelunik\Acme\Registration;
+use Kelunik\AcmeClient\Stores\KeyStore;
+use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
+use RuntimeException;
 use function Amp\File\exists;
+use function Amp\File\put;
 use function Amp\resolve;
+use function Kelunik\AcmeClient\serverToIdentity;
 
-class Register implements Command {
+class Setup implements Command {
     private $logger;
 
     public function __construct(LoggerInterface $logger) {
@@ -29,10 +33,6 @@ class Register implements Command {
     }
 
     public function doExecute(Manager $args): Generator {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
-
         $email = $args->get("email");
         yield resolve($this->checkEmail($email));
 
@@ -42,46 +42,47 @@ class Register implements Command {
         if (!$protocol || $protocol === $server) {
             $server = "https://" . $server;
         } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid server protocol, only HTTPS supported");
+            throw new \InvalidArgumentException("Invalid protocol, only https is allowed!");
         }
 
-        $identity = str_replace(["/", "%"], "-", substr($server, 8));
+        $path = "account/key.pem";
+        $bits = 4096;
 
-        $path = __DIR__ . "/../../data/accounts";
-        $pathPrivate = "{$path}/{$identity}.private.key";
-        $pathPublic = "{$path}/{$identity}.public.key";
+        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        if ((yield exists($pathPrivate)) && (yield exists($pathPublic))) {
-            $this->logger->info("Loading existing keys ...");
+        try {
+            $this->logger->info("Loading private key ...");
+            $keyPair = yield $keyStore->get($path);
+            $this->logger->info("Existing private key successfully loaded.");
+        } catch (KeyStoreException $e) {
+            $this->logger->info("No existing private key found, generating new one ...");
+            $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
+            $this->logger->info("Generated new private key with {$bits} bits.");
 
-            $private = file_get_contents($pathPrivate);
-            $public = file_get_contents($pathPublic);
+            $this->logger->info("Saving new private key ...");
+            $keyPair = yield $keyStore->put($path, $keyPair);
+            $this->logger->info("New private key successfully saved.");
+        }
 
-            $keyPair = new KeyPair($private, $public);
-        } else {
-            $this->logger->info("Generating key keys ...");
+        $user = $args->get("user") ?? "www-data";
+        $userInfo = posix_getpwnam($user);
 
-            $keyPair = (new OpenSSLKeyGenerator)->generate(4096);
-
-            if (!mkdir($path, 0700, true)) {
-                throw new AcmeException("Couldn't create account directory");
-            }
-
-            file_put_contents($pathPrivate, $keyPair->getPrivate());
-            file_put_contents($pathPublic, $keyPair->getPublic());
-
-            chmod($pathPrivate, 600);
-            chmod($pathPrivate, 600);
+        if (!$userInfo) {
+            throw new RuntimeException("User doesn't exist: '{$user}'");
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
-
         /** @var Registration $registration */
         $registration = yield $acme->register($email);
+        $this->logger->notice("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
 
-        $this->logger->notice("Registration successful with contact " . json_encode($registration->getContact()));
+        yield put(dirname(dirname(__DIR__)) . "/data/account/config.json", json_encode([
+            "version" => 1,
+            "server" => $server,
+            "email" => $email,
+        ], JSON_PRETTY_PRINT) . "\n");
     }
 
     private function checkEmail(string $email): Generator {
@@ -103,12 +104,12 @@ class Register implements Command {
             "server" => [
                 "prefix" => "s",
                 "longPrefix" => "server",
-                "description" => "ACME server to register for.",
+                "description" => "ACME server to use for registration and issuance of certificates.",
                 "required" => true,
             ],
             "email" => [
                 "longPrefix" => "email",
-                "description" => "Email to be notified about important account issues.",
+                "description" => "Email for important issues, will be sent to the ACME server.",
                 "required" => true,
             ],
         ];

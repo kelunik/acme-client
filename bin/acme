@@ -7,6 +7,8 @@ use Kelunik\AcmeClient\LoggerColorScheme;
 use League\CLImate\CLImate;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
+use Psr\Log\LoggerInterface;
+use function Kelunik\AcmeClient\commandToClass;
 
 require __DIR__ . "/../vendor/autoload.php";
 
@@ -20,26 +22,27 @@ $help = <<<EOT
     Usage: bin/acme command --args
 
     Available Commands:
-    bin/acme register
+    bin/acme setup
     bin/acme issue
     bin/acme revoke
+    bin/acme renew
 
     Get more help by appending --help to specific commands.
 
 
 EOT;
 
-$commands = [
-    "issue" => "Kelunik\\AcmeClient\\Commands\\Issue",
-    "register" => "Kelunik\\AcmeClient\\Commands\\Register",
-    "revoke" => "Kelunik\\AcmeClient\\Commands\\Revoke",
-];
-
 $climate = new CLImate;
 $injector = new Injector;
+$commands = [
+    "setup",
+    "revoke",
+    "issue",
+    "renew",
+];
 
-if (!isset($argv)) {
-    $climate->error("\$argv is not defined");
+if (PHP_SAPI !== "phpdbg" && PHP_SAPI !== "cli") {
+    $climate->error("Please run this script as command line script!");
     exit(1);
 }
 
@@ -48,25 +51,35 @@ if (count($argv) === 1 || $argv[1] === "-h" || $argv[1] === "--help" || $argv[1]
     exit(0);
 }
 
-if (!array_key_exists($argv[1], $commands)) {
+if (!in_array($argv[1], $commands)) {
     $climate->error("Unknown command: '{$argv[1]}'");
 
     exit(1);
 }
 
+// TODO: Implement subcommand help
+
+$class = commandToClass($argv[1]);
+$definition = $class::getDefinition();
+
 try {
-    $climate->arguments->add($commands[$argv[1]]::getDefinition());
+    $climate->arguments->add($definition);
     $climate->arguments->parse();
 } catch (Exception $e) {
-    if ($climate->arguments->defined("help")) {
-        print $help;
+    $climate->usage(["bin/acme {$argv[1]}"]);
+    $climate->br();
 
-        exit(0);
-    } else {
+    if (count($argv) !== 3 || !in_array($argv[2], ["-h", "--help", "help"])) {
         $climate->error($e->getMessage());
-
-        exit(1);
     }
+
+    exit(1);
+}
+
+if (posix_geteuid() !== 0) {
+    $climate->error("Please run this script as root!");
+
+    exit(1);
 }
 
 $handler = new StreamHandler("php://stdout", Logger::DEBUG);
@@ -75,10 +88,10 @@ $handler->setFormatter(new ColoredLineFormatter(new LoggerColorScheme, null, nul
 $logger = new Logger("ACME");
 $logger->pushHandler($handler);
 
-$injector->alias("Psr\\Log\\LoggerInterface", Logger::class);
+$injector->alias(LoggerInterface::class, Logger::class);
 $injector->share($logger);
 
-$command = $injector->make($commands[$argv[1]]);
+$command = $injector->make(commandToClass($argv[1]));
 
 Amp\run(function () use ($command, $climate, $logger) {
     try {

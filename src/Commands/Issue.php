@@ -4,13 +4,17 @@ namespace Kelunik\AcmeClient\Commands;
 
 use Amp\Dns as dns;
 use Amp\Dns\Record;
+use function Amp\File\put;
 use Amp\Promise;
 use Generator;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
-use Kelunik\Acme\KeyPair;
 use Kelunik\Acme\OpenSSLKeyGenerator;
+use Kelunik\AcmeClient\Stores\CertificateStore;
+use Kelunik\AcmeClient\Stores\ChallengeStore;
+use Kelunik\AcmeClient\Stores\KeyStore;
+use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
 use stdClass;
@@ -18,6 +22,7 @@ use Throwable;
 use function Amp\all;
 use function Amp\any;
 use function Amp\resolve;
+use function Kelunik\AcmeClient\getServer;
 
 class Issue implements Command {
     private $logger;
@@ -31,35 +36,22 @@ class Issue implements Command {
     }
 
     private function doExecute(Manager $args): Generator {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
+        $domains = array_map("trim", explode(",", $args->get("domains")));
+        yield resolve($this->checkDnsRecords($domains));
 
         $user = $args->get("user") ?? "www-data";
 
-        $server = $args->get("server");
-        $protocol = substr($server, 0, strpos("://", $server));
+        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        if (!$protocol || $protocol === $server) {
-            $server = "https://" . $server;
-        } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid server protocol, only HTTPS supported");
-        }
-
-        $domains = $args->get("domains");
-        $domains = array_map("trim", explode(",", $domains));
-        yield from $this->checkDnsRecords($domains);
-
-        $keyPair = $this->checkRegistration($args);
-
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $keyPair = yield $keyStore->get("account/key.pem");
+        $acme = new AcmeService(new AcmeClient(getServer(), $keyPair), $keyPair);
 
         foreach ($domains as $domain) {
             list($location, $challenges) = yield $acme->requestChallenges($domain);
             $goodChallenges = $this->findSuitableCombination($challenges);
 
             if (empty($goodChallenges)) {
-                throw new AcmeException("Couldn't find any combination of challenges which this server can solve!");
+                throw new AcmeException("Couldn't find any combination of challenges which this client can solve!");
             }
 
             $challenge = $challenges->challenges[reset($goodChallenges)];
@@ -72,30 +64,13 @@ class Issue implements Command {
             $this->logger->debug("Generating payload...");
             $payload = $acme->generateHttp01Payload($token);
 
-            $docRoot = rtrim($args->get("path") ?? __DIR__ . "/../../data/public", "/\\");
-            $path = $docRoot . "/.well-known/acme-challenge";
+            $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
+            $docRoot = rtrim(str_replace("\\", "/", $args->get("path")), "/");
+
+            $challengeStore = new ChallengeStore($docRoot);
 
             try {
-                if (!file_exists($docRoot)) {
-                    throw new AcmeException("Document root doesn't exist: " . $docRoot);
-                }
-
-                if (!file_exists($path) && !@mkdir($path, 0770, true)) {
-                    throw new AcmeException("Couldn't create public dir to serve the challenges: " . $path);
-                }
-
-                if (!$userInfo = posix_getpwnam($user)) {
-                    throw new AcmeException("Unknown user: " . $user);
-                }
-
-                chown($docRoot . "/.well-known", $userInfo["uid"]);
-                chown($docRoot . "/.well-known/acme-challenge", $userInfo["uid"]);
-
-                $this->logger->info("Providing payload for {$domain} at {$path}/{$token}");
-
-                file_put_contents("{$path}/{$token}", $payload);
-                chown("{$path}/{$token}", $userInfo["uid"]);
-                chmod("{$path}/{$token}", 0660);
+                $challengeStore->put($token, $payload, $user);
 
                 yield $acme->selfVerify($domain, $token, $payload);
                 $this->logger->info("Successfully self-verified challenge.");
@@ -106,53 +81,38 @@ class Issue implements Command {
                 yield $acme->pollForChallenge($location);
                 $this->logger->info("Challenge successful. {$domain} is now authorized.");
 
-                @unlink("{$path}/{$token}");
+                yield $challengeStore->delete($token);
             } catch (Throwable $e) {
                 // no finally because generators...
-                @unlink("{$path}/{$token}");
+                yield $challengeStore->delete($token);
                 throw $e;
             }
         }
 
-        $path = __DIR__ . "/../../data/live/" . reset($domains);
+        $path = "certs/" . reset($domains) . "/key.pem";
+        $bits = $args->get("bits") ?? 2048;
 
-        if (!file_exists($path) && !mkdir($path, 0700, true)) {
-            throw new AcmeException("Couldn't create directory: {$path}");
-        }
-
-        if (file_exists($path . "/private.pem") && file_exists($path . "/public.pem")) {
-            $private = file_get_contents($path . "/private.pem");
-            $public = file_get_contents($path . "/public.pem");
-
-            $this->logger->info("Using existing domain key found at {$path}");
-
-            $domainKeys = new KeyPair($private, $public);
-        } else {
-            $domainKeys = (new OpenSSLKeyGenerator)->generate(2048);
-
-            file_put_contents($path . "/private.pem", $domainKeys->getPrivate());
-            file_put_contents($path . "/public.pem", $domainKeys->getPublic());
-
-            $this->logger->info("Saved new domain key at {$path}");
-
-            chmod($path . "/private.pem", 0600);
-            chmod($path . "/public.pem", 0600);
+        try {
+            $keyPair = yield $keyStore->get($path);
+        } catch (KeyStoreException $e) {
+            $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
+            $keyPair = yield $keyStore->put($path, $keyPair);
         }
 
         $this->logger->info("Requesting certificate ...");
 
-        $location = yield $acme->requestCertificate($domainKeys, $domains);
+        $location = yield $acme->requestCertificate($keyPair, $domains);
         $certificates = yield $acme->pollForCertificate($location);
 
-        $this->logger->info("Saving certificate ...");
+        $path = dirname(dirname(__DIR__)) . "/data/certs";
+        $certificateStore = new CertificateStore($path);
+        yield $certificateStore->put($certificates);
 
-        file_put_contents($path . "/cert.pem", reset($certificates));
-        file_put_contents($path . "/fullchain.pem", implode("\n", $certificates));
+        yield put($path . "/" . reset($domains) . "/config.json", json_encode([
+            "domains" => $domains, "path" => $args->get("path"), "user" => $user, "bits" => $bits
+        ], JSON_PRETTY_PRINT) . "\n");
 
-        array_shift($certificates);
-        file_put_contents($path . "/chain.pem", implode("\n", $certificates));
-
-        $this->logger->info("Successfully issued certificate.");
+        $this->logger->info("Successfully issued certificate, see {$path}/" . reset($domains));
     }
 
     private function checkDnsRecords($domains): Generator {
@@ -172,34 +132,6 @@ class Issue implements Command {
         }
 
         $this->logger->info("Checked DNS records, all fine.");
-    }
-
-    private function checkRegistration(Manager $args) {
-        $server = $args->get("server");
-        $protocol = substr($server, 0, strpos("://", $server));
-
-        if (!$protocol || $protocol === $server) {
-            $server = "https://" . $server;
-        } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid server protocol, only HTTPS supported");
-        }
-
-        $identity = str_replace(["/", "%"], "-", substr($server, 8));
-
-        $path = __DIR__ . "/../../data/accounts";
-        $pathPrivate = "{$path}/{$identity}.private.key";
-        $pathPublic = "{$path}/{$identity}.public.key";
-
-        if (file_exists($pathPrivate) && file_exists($pathPublic)) {
-            $private = file_get_contents($pathPrivate);
-            $public = file_get_contents($pathPublic);
-
-            $this->logger->info("Found account keys.");
-
-            return new KeyPair($private, $public);
-        }
-
-        throw new AcmeException("No registration found for server, please register first");
     }
 
     private function findSuitableCombination(stdClass $response): array {
@@ -227,26 +159,26 @@ class Issue implements Command {
             "domains" => [
                 "prefix" => "d",
                 "longPrefix" => "domains",
-                "description" => "Domains to request a certificate for.",
+                "description" => "Comma separated list of domains to request a certificate for.",
                 "required" => true,
-            ],
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for authorization.",
-                "required" => true,
-            ],
-            "user" => [
-                "prefix" => "s",
-                "longPrefix" => "user",
-                "description" => "User for the public directory.",
-                "required" => false,
             ],
             "path" => [
                 "prefix" => "p",
                 "longPrefix" => "path",
-                "description" => "Path to the document root for ACME challenges.",
-                "required" => false,
+                "description" => "Absolute path to the document root of these domains.",
+                "required" => true,
+            ],
+            "user" => [
+                "prefix" => "u",
+                "longPrefix" => "user",
+                "description" => "User running the web server.",
+                "defaultValue" => "www-data",
+            ],
+            "bits" => [
+                "longPrefix" => "bits",
+                "description" => "Length of the private key in bit.",
+                "defaultValue" => 2048,
+                "castTo" => "int",
             ],
         ];
     }

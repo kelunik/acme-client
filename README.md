@@ -8,6 +8,8 @@ It's an alternative for the [official client](https://github.com/letsencrypt/let
 
 > **Warning**: This software is under heavy development. Use at your own risk.
 
+The client has been updated on Dec 9th in a non-backwards compatible manner. Please review the changes or use a new clone.
+
 ## Installation
 
 ```
@@ -28,7 +30,7 @@ By using this client you agree to any agreement and any further updates by conti
 You're responsible to react to updates and stop the automation if you no longer agree with the terms of service.
 
 ```
-sudo bin/acme register \
+sudo bin/acme setup \
     --server acme-v01.api.letsencrypt.org/directory \
     --email me@example.com
 ```
@@ -39,17 +41,15 @@ You must have a document root setup in order to use this client.
 
 ```
 sudo bin/acme issue \
-    --server acme-v01.api.letsencrypt.org/directory \
     --domains example.com,www.example.com \
     --path /var/www/example.com
 ```
 
-For renewal, just run this command again.
+For renewal, just run this command again. If you want to automate this task, use `bin/acme renew` as your daily cron command.
+It will renew certificates automatically when they're no longer than 30 days valid.
 
 To revoke a certificate, you need a valid account key currently, just like for issuance.
 
 ```
-sudo bin/acme revoke \
-    --server acme-v01.api.letsencrypt.org/directory \
-    --cert data/live/example.com/cert.pem
+sudo bin/acme revoke --name example.com
 ```

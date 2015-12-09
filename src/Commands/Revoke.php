@@ -2,12 +2,16 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\File\FilesystemException;
 use Amp\Promise;
 use Generator;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
 use Kelunik\Acme\KeyPair;
+use function Kelunik\AcmeClient\getServer;
+use Kelunik\AcmeClient\Stores\CertificateStore;
+use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
@@ -31,75 +35,36 @@ class Revoke implements Command {
             throw new AcmeException("Please run this script as root!");
         }
 
-        $server = $args->get("server");
-        $protocol = substr($server, 0, strpos("://", $server));
+        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        if (!$protocol || $protocol === $server) {
-            $server = "https://" . $server;
-        } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid server protocol, only HTTPS supported");
-        }
-
-        $keyPair = $this->checkRegistration($args);
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $keyPair = yield $keyStore->get("account/key.pem");
+        $acme = new AcmeService(new AcmeClient(getServer(), $keyPair), $keyPair);
 
         $this->logger->info("Revoking certificate ...");
 
-        $pem = yield get($args->get("cert"));
-        $cert = new Certificate($pem);
+        try {
+            $pem = yield get(dirname(dirname(__DIR__)) . "/data/certs/" . $args->get("name") . "/cert.pem");
+            $cert = new Certificate($pem);
+        } catch (FilesystemException $e) {
+            throw new \RuntimeException("There's no such certificate!");
+        }
 
         if ($cert->getValidTo() < time()) {
             $this->logger->warning("Certificate did already expire, no need to revoke it.");
-            return;
         }
 
         $this->logger->info("Certificate was valid for: " . implode(", ", $cert->getNames()));
-
         yield $acme->revokeCertificate($pem);
-
         $this->logger->info("Certificate has been revoked.");
-    }
 
-    private function checkRegistration(Manager $args) {
-        $server = $args->get("server");
-        $protocol = substr($server, 0, strpos("://", $server));
-
-        if (!$protocol || $protocol === $server) {
-            $server = "https://" . $server;
-        } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid server protocol, only HTTPS supported");
-        }
-
-        $identity = str_replace(["/", "%"], "-", substr($server, 8));
-
-        $path = __DIR__ . "/../../data/accounts";
-        $pathPrivate = "{$path}/{$identity}.private.key";
-        $pathPublic = "{$path}/{$identity}.public.key";
-
-        if (file_exists($pathPrivate) && file_exists($pathPublic)) {
-            $private = file_get_contents($pathPrivate);
-            $public = file_get_contents($pathPublic);
-
-            $this->logger->info("Found account keys.");
-
-            return new KeyPair($private, $public);
-        }
-
-        throw new AcmeException("No registration found for server, please register first");
+        yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs"))->delete($args->get("name"));
     }
 
     public static function getDefinition(): array {
         return [
-            "cert" => [
-                "prefix" => "c",
-                "longPrefix" => "cert",
-                "description" => "Certificate to be revoked.",
-                "required" => true,
-            ],
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for authorization.",
+            "name" => [
+                "longPrefix" => "name",
+                "description" => "Common name of the certificate to be revoked.",
                 "required" => true,
             ],
         ];
