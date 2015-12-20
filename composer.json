@@ -2,17 +2,17 @@
     "name": "kelunik/acme-client",
     "description": "Standalone PHP ACME client.",
     "require": {
-        "php": ">=7.0.0",
+        "amphp/process": "^0.1.1",
+        "bramus/monolog-colored-line-formatter": "^2",
         "ext-posix": "*",
         "ext-openssl": "*",
-        "bramus/monolog-colored-line-formatter": "^2",
         "kelunik/acme": "^0.2",
         "kelunik/certificate": "^0.2",
         "league/climate": "^3",
         "monolog/monolog": "^1.17",
+        "php": ">=5.5",
         "psr/log": "^1",
-        "rdlowrey/auryn": "^1",
-        "amphp/process": "^0.1.1"
+        "rdlowrey/auryn": "^1"
     },
     "license": "MIT",
     "authors": [
@@ -26,9 +26,6 @@
     "autoload": {
         "psr-4": {
             "Kelunik\\AcmeClient\\": "src"
-        },
-        "files": [
-            "src/functions.php"
-        ]
+        }
     }
 }

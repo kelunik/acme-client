@@ -61,13 +61,6 @@ class Setup implements Command {
             $this->logger->info("New private key successfully saved.");
         }
 
-        $user = $args->get("user") ?: "www-data";
-        $userInfo = posix_getpwnam($user);
-
-        if (!$userInfo) {
-            throw new RuntimeException("User doesn't exist: '{$user}'");
-        }
-
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
