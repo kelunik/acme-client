@@ -8,16 +8,11 @@ use Generator;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
-use Kelunik\Acme\KeyPair;
-use function Kelunik\AcmeClient\getServer;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
-use function Amp\File\exists;
-use function Amp\File\get;
-use function Amp\resolve;
 
 class Revoke implements Command {
     private $logger;
@@ -26,24 +21,24 @@ class Revoke implements Command {
         $this->logger = $logger;
     }
 
-    public function execute(Manager $args): Promise {
-        return resolve($this->doExecute($args));
+    public function execute(Manager $args) {
+        return \Amp\resolve($this->doExecute($args));
     }
 
-    private function doExecute(Manager $args): Generator {
+    private function doExecute(Manager $args) {
         if (posix_geteuid() !== 0) {
             throw new AcmeException("Please run this script as root!");
         }
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        $keyPair = yield $keyStore->get("account/key.pem");
-        $acme = new AcmeService(new AcmeClient(getServer(), $keyPair), $keyPair);
+        $keyPair = (yield $keyStore->get("account/key.pem"));
+        $acme = new AcmeService(new AcmeClient(\Kelunik\AcmeClient\getServer(), $keyPair), $keyPair);
 
         $this->logger->info("Revoking certificate ...");
 
         try {
-            $pem = yield get(dirname(dirname(__DIR__)) . "/data/certs/" . $args->get("name") . "/cert.pem");
+            $pem = (yield \Amp\File\get(dirname(dirname(__DIR__)) . "/data/certs/" . $args->get("name") . "/cert.pem"));
             $cert = new Certificate($pem);
         } catch (FilesystemException $e) {
             throw new \RuntimeException("There's no such certificate!");
@@ -60,7 +55,7 @@ class Revoke implements Command {
         yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs"))->delete($args->get("name"));
     }
 
-    public static function getDefinition(): array {
+    public static function getDefinition() {
         return [
             "name" => [
                 "longPrefix" => "name",

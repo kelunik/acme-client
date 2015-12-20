@@ -3,30 +3,25 @@
 namespace Kelunik\AcmeClient\Stores;
 
 use Amp\File\FilesystemException;
-use Amp\Promise;
-use Generator;
 use InvalidArgumentException;
 use Kelunik\Certificate\Certificate;
-use function Amp\File\put;
-use function Amp\File\chmod;
-use function Amp\File\chown;
-use function Amp\File\scandir;
-use function Amp\File\unlink;
-use function Amp\resolve;
-use function Amp\File\rmdir;
 
 class CertificateStore {
     private $root;
 
-    public function __construct(string $root) {
+    public function __construct($root) {
+        if (!is_string($root)) {
+            throw new InvalidArgumentException(sprintf("\$root must be of type string, %s given.", gettype($root)));
+        }
+
         $this->root = rtrim(str_replace("\\", "/", $root), "/");
     }
 
-    public function put(array $certificates): Promise {
-        return resolve($this->doPut($certificates));
+    public function put(array $certificates) {
+        return \Amp\resolve($this->doPut($certificates));
     }
 
-    private function doPut(array $certificates): Generator {
+    private function doPut(array $certificates) {
         if (empty($certificates)) {
             throw new InvalidArgumentException("Empty array not allowed");
         }
@@ -52,31 +47,39 @@ class CertificateStore {
                 throw new FilesystemException("Couldn't create certificate directory: '{$path}'");
             }
 
-            yield put($path . "/cert.pem", $certificates[0]);
-            yield chown($path . "/cert.pem", 0, 0);
-            yield chmod($path . "/cert.pem", 0640);
+            yield \Amp\File\put($path . "/cert.pem", $certificates[0]);
+            yield \Amp\File\chown($path . "/cert.pem", 0, 0);
+            yield \Amp\File\chmod($path . "/cert.pem", 0640);
 
-            yield put($path . "/fullchain.pem", implode("\n", $certificates));
-            yield chown($path . "/fullchain.pem", 0, 0);
-            yield chmod($path . "/fullchain.pem", 0640);
+            yield \Amp\File\put($path . "/fullchain.pem", implode("\n", $certificates));
+            yield \Amp\File\chown($path . "/fullchain.pem", 0, 0);
+            yield \Amp\File\chmod($path . "/fullchain.pem", 0640);
 
-            yield put($path . "/chain.pem", implode("\n", $chain));
-            yield chown($path . "/chain.pem", 0, 0);
-            yield chmod($path . "/chain.pem", 0640);
+            yield \Amp\File\put($path . "/chain.pem", implode("\n", $chain));
+            yield \Amp\File\chown($path . "/chain.pem", 0, 0);
+            yield \Amp\File\chmod($path . "/chain.pem", 0640);
         } catch (FilesystemException $e) {
             throw new CertificateStoreException("Couldn't save certificates for '{$commonName}'", 0, $e);
         }
     }
 
-    public function delete(string $name): Promise {
-        return resolve($this->doDelete($name));
-    }
-
-    private function doDelete(string $name): Generator {
-        foreach ((yield scandir($this->root . "/" . $name)) as $file) {
-            yield unlink($this->root . "/" . $name . "/" . $file);
+    public function delete($name) {
+        if (!is_string($name)) {
+            throw new InvalidArgumentException(sprintf("\$name must be of type string, %s given.", gettype($name)));
         }
 
-        yield rmdir($this->root . "/" . $name);
+        return \Amp\resolve($this->doDelete($name));
+    }
+
+    private function doDelete($name) {
+        if (!is_string($name)) {
+            throw new InvalidArgumentException(sprintf("\$name must be of type string, %s given.", gettype($name)));
+        }
+
+        foreach ((yield \Amp\File\scandir($this->root . "/" . $name)) as $file) {
+            yield \Amp\File\unlink($this->root . "/" . $name . "/" . $file);
+        }
+
+        yield \Amp\File\rmdir($this->root . "/" . $name);
     }
 }

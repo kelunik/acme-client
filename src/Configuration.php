@@ -7,7 +7,7 @@ use RuntimeException;
 class Configuration {
     private $config;
 
-    public function __construct(string $file) {
+    public function __construct($file) {
         $json = file_get_contents($file);
 
         if (!$json) {
@@ -21,7 +21,7 @@ class Configuration {
         }
     }
 
-    public function get(string $key) {
-        return $this->config->{$key} ?? null;
+    public function get($key) {
+        return isset($this->config->{$key}) ? $this->config->{$key} : null;
     }
 }

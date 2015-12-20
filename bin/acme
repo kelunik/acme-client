@@ -8,7 +8,6 @@ use League\CLImate\CLImate;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
-use function Kelunik\AcmeClient\commandToClass;
 
 require __DIR__ . "/../vendor/autoload.php";
 
@@ -57,9 +56,7 @@ if (!in_array($argv[1], $commands)) {
     exit(1);
 }
 
-// TODO: Implement subcommand help
-
-$class = commandToClass($argv[1]);
+$class = \Kelunik\AcmeClient\commandToClass($argv[1]);
 $definition = $class::getDefinition();
 
 try {
@@ -91,7 +88,7 @@ $logger->pushHandler($handler);
 $injector->alias(LoggerInterface::class, Logger::class);
 $injector->share($logger);
 
-$command = $injector->make(commandToClass($argv[1]));
+$command = $injector->make($class);
 
 Amp\run(function () use ($command, $climate, $logger) {
     try {

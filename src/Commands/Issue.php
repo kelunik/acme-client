@@ -2,11 +2,8 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
-use Amp\Dns as dns;
 use Amp\Dns\Record;
-use function Amp\File\put;
-use Amp\Promise;
-use Generator;
+use Exception;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
@@ -19,10 +16,6 @@ use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
 use stdClass;
 use Throwable;
-use function Amp\all;
-use function Amp\any;
-use function Amp\resolve;
-use function Kelunik\AcmeClient\getServer;
 
 class Issue implements Command {
     private $logger;
@@ -31,23 +24,23 @@ class Issue implements Command {
         $this->logger = $logger;
     }
 
-    public function execute(Manager $args): Promise {
-        return resolve($this->doExecute($args));
+    public function execute(Manager $args) {
+        return \Amp\resolve($this->doExecute($args));
     }
 
-    private function doExecute(Manager $args): Generator {
+    private function doExecute(Manager $args) {
         $domains = array_map("trim", explode(",", $args->get("domains")));
-        yield resolve($this->checkDnsRecords($domains));
+        yield \Amp\resolve($this->checkDnsRecords($domains));
 
-        $user = $args->get("user") ?? "www-data";
+        $user = $args->get("user") ?: "www-data";
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        $keyPair = yield $keyStore->get("account/key.pem");
-        $acme = new AcmeService(new AcmeClient(getServer(), $keyPair), $keyPair);
+        $keyPair = (yield $keyStore->get("account/key.pem"));
+        $acme = new AcmeService(new AcmeClient(\Kelunik\AcmeClient\getServer(), $keyPair), $keyPair);
 
         foreach ($domains as $domain) {
-            list($location, $challenges) = yield $acme->requestChallenges($domain);
+            list($location, $challenges) = (yield $acme->requestChallenges($domain));
             $goodChallenges = $this->findSuitableCombination($challenges);
 
             if (empty($goodChallenges)) {
@@ -82,6 +75,10 @@ class Issue implements Command {
                 $this->logger->info("Challenge successful. {$domain} is now authorized.");
 
                 yield $challengeStore->delete($token);
+            } catch (Exception $e) {
+                // no finally because generators...
+                yield $challengeStore->delete($token);
+                throw $e;
             } catch (Throwable $e) {
                 // no finally because generators...
                 yield $challengeStore->delete($token);
@@ -90,42 +87,42 @@ class Issue implements Command {
         }
 
         $path = "certs/" . reset($domains) . "/key.pem";
-        $bits = $args->get("bits") ?? 2048;
+        $bits = $args->get("bits") ?: 2048;
 
         try {
-            $keyPair = yield $keyStore->get($path);
+            $keyPair = (yield $keyStore->get($path));
         } catch (KeyStoreException $e) {
             $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
-            $keyPair = yield $keyStore->put($path, $keyPair);
+            $keyPair = (yield $keyStore->put($path, $keyPair));
         }
 
         $this->logger->info("Requesting certificate ...");
 
-        $location = yield $acme->requestCertificate($keyPair, $domains);
-        $certificates = yield $acme->pollForCertificate($location);
+        $location = (yield $acme->requestCertificate($keyPair, $domains));
+        $certificates = (yield $acme->pollForCertificate($location));
 
         $path = dirname(dirname(__DIR__)) . "/data/certs";
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
-        yield put($path . "/" . reset($domains) . "/config.json", json_encode([
-            "domains" => $domains, "path" => $args->get("path"), "user" => $user, "bits" => $bits
-        ], JSON_PRETTY_PRINT) . "\n");
+        yield \Amp\File\put($path . "/" . reset($domains) . "/config.json", json_encode([
+                "domains" => $domains, "path" => $args->get("path"), "user" => $user, "bits" => $bits,
+            ], JSON_PRETTY_PRINT) . "\n");
 
         $this->logger->info("Successfully issued certificate, see {$path}/" . reset($domains));
     }
 
-    private function checkDnsRecords($domains): Generator {
+    private function checkDnsRecords($domains) {
         $promises = [];
 
         foreach ($domains as $domain) {
-            $promises[$domain] = dns\resolve($domain, [
+            $promises[$domain] = \Amp\Dns\resolve($domain, [
                 "types" => [Record::A],
                 "hosts" => false,
             ]);
         }
 
-        list($errors) = yield any($promises);
+        list($errors) = (yield \Amp\any($promises));
 
         if (!empty($errors)) {
             throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(array_keys($errors)));
@@ -134,9 +131,9 @@ class Issue implements Command {
         $this->logger->info("Checked DNS records, all fine.");
     }
 
-    private function findSuitableCombination(stdClass $response): array {
-        $challenges = $response->challenges ?? [];
-        $combinations = $response->combinations ?? [];
+    private function findSuitableCombination(stdClass $response) {
+        $challenges = isset($response->challenges) ? $response->challenges : [];
+        $combinations = isset($response->combinations) ? $response->combinations : [];
         $goodChallenges = [];
 
         foreach ($challenges as $i => $challenge) {
@@ -154,7 +151,7 @@ class Issue implements Command {
         return $goodChallenges;
     }
 
-    public static function getDefinition(): array {
+    public static function getDefinition() {
         return [
             "domains" => [
                 "prefix" => "d",

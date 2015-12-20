@@ -3,16 +3,9 @@
 namespace Kelunik\AcmeClient\Commands;
 
 use Amp\Process;
-use Amp\Promise;
-use Generator;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
-use function Amp\all;
-use function Amp\File\get;
-use function Amp\File\scandir;
-use function Amp\pipe;
-use function Amp\resolve;
 
 class Renew implements Command {
     private $logger;
@@ -21,22 +14,22 @@ class Renew implements Command {
         $this->logger = $logger;
     }
 
-    public function execute(Manager $args): Promise {
-        return resolve($this->doExecute($args));
+    public function execute(Manager $args) {
+        return \Amp\resolve($this->doExecute($args));
     }
 
-    private function doExecute(Manager $args): Generator {
+    private function doExecute(Manager $args) {
         $path = dirname(dirname(__DIR__)) . "/data/certs";
 
         if (!realpath($path)) {
             throw new \RuntimeException("Certificate path doesn't exist: '{$path}'");
         }
 
-        $domains = yield scandir($path);
+        $domains = (yield \Amp\File\scandir($path));
         $promises = [];
 
         foreach ($domains as $domain) {
-            $pem = yield get($path . "/" . $domain . "/cert.pem");
+            $pem = (yield \Amp\File\get($path . "/" . $domain . "/cert.pem"));
             $cert = new Certificate($pem);
 
             if ($cert->getValidTo() > time() + 30 * 24 * 60 * 60) {
@@ -45,7 +38,7 @@ class Renew implements Command {
                 continue;
             }
 
-            $json = yield get($path . "/" . $domain . "/config.json");
+            $json = (yield \Amp\File\get($path . "/" . $domain . "/config.json"));
             $config = json_decode($json);
 
             $command = [
@@ -63,7 +56,7 @@ class Renew implements Command {
             $command = array_map("escapeshellarg", $command);
             $command = implode(" ", $command);
 
-            $promises[] = pipe((new Process($command))->exec()->watch(function ($update) {
+            $promises[] = \Amp\pipe((new Process($command))->exec()->watch(function ($update) {
                 list($type, $data) = $update;
 
                 if ($type === "err") {
@@ -78,7 +71,7 @@ class Renew implements Command {
             });
         }
 
-        $results = yield all($promises);
+        $results = (yield \Amp\all($promises));
 
         foreach ($results as $result) {
             if ($result->exit !== 0) {
@@ -87,7 +80,7 @@ class Renew implements Command {
         }
     }
 
-    public static function getDefinition(): array {
+    public static function getDefinition() {
         return [];
     }
 }

@@ -2,11 +2,10 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
-use Amp\Promise;
 use League\CLImate\Argument\Manager;
 
 interface Command {
-    public function execute(Manager $args): Promise;
+    public function execute(Manager $args);
 
-    public static function getDefinition(): array;
+    public static function getDefinition();
 }

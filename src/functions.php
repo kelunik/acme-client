@@ -2,7 +2,7 @@
 
 namespace Kelunik\AcmeClient;
 
-function commandToClass(string $command): string {
+function commandToClass($command) {
     return __NAMESPACE__ . "\\Commands\\" . ucfirst($command);
 }
 

@@ -6,6 +6,7 @@ use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use Amp\Promise;
 use Generator;
+use InvalidArgumentException;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
@@ -16,10 +17,6 @@ use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
-use function Amp\File\exists;
-use function Amp\File\put;
-use function Amp\resolve;
-use function Kelunik\AcmeClient\serverToIdentity;
 
 class Setup implements Command {
     private $logger;
@@ -28,13 +25,13 @@ class Setup implements Command {
         $this->logger = $logger;
     }
 
-    public function execute(Manager $args): Promise {
-        return resolve($this->doExecute($args));
+    public function execute(Manager $args) {
+        return \Amp\resolve($this->doExecute($args));
     }
 
-    public function doExecute(Manager $args): Generator {
+    public function doExecute(Manager $args) {
         $email = $args->get("email");
-        yield resolve($this->checkEmail($email));
+        yield \Amp\resolve($this->checkEmail($email));
 
         $server = $args->get("server");
         $protocol = substr($server, 0, strpos("://", $server));
@@ -52,7 +49,7 @@ class Setup implements Command {
 
         try {
             $this->logger->info("Loading private key ...");
-            $keyPair = yield $keyStore->get($path);
+            $keyPair = (yield $keyStore->get($path));
             $this->logger->info("Existing private key successfully loaded.");
         } catch (KeyStoreException $e) {
             $this->logger->info("No existing private key found, generating new one ...");
@@ -60,11 +57,11 @@ class Setup implements Command {
             $this->logger->info("Generated new private key with {$bits} bits.");
 
             $this->logger->info("Saving new private key ...");
-            $keyPair = yield $keyStore->put($path, $keyPair);
+            $keyPair = (yield $keyStore->put($path, $keyPair));
             $this->logger->info("New private key successfully saved.");
         }
 
-        $user = $args->get("user") ?? "www-data";
+        $user = $args->get("user") ?: "www-data";
         $userInfo = posix_getpwnam($user);
 
         if (!$userInfo) {
@@ -75,17 +72,21 @@ class Setup implements Command {
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
         /** @var Registration $registration */
-        $registration = yield $acme->register($email);
+        $registration = (yield $acme->register($email));
         $this->logger->notice("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
 
-        yield put(dirname(dirname(__DIR__)) . "/data/account/config.json", json_encode([
+        yield \Amp\File\put(dirname(dirname(__DIR__)) . "/data/account/config.json", json_encode([
             "version" => 1,
             "server" => $server,
             "email" => $email,
         ], JSON_PRETTY_PRINT) . "\n");
     }
 
-    private function checkEmail(string $email): Generator {
+    private function checkEmail($email) {
+        if (!is_string($email)) {
+            throw new InvalidArgumentException(sprintf("\$email must be of type string, %s given.", gettype($email)));
+        }
+
         $host = substr($email, strrpos($email, "@") + 1);
 
         if (!$host) {
@@ -99,7 +100,7 @@ class Setup implements Command {
         }
     }
 
-    public static function getDefinition(): array {
+    public static function getDefinition() {
         return [
             "server" => [
                 "prefix" => "s",
