@@ -2,7 +2,7 @@
     "name": "kelunik/acme-client",
     "description": "Standalone PHP ACME client.",
     "require": {
-        "php": ">=7.0.0",
+        "php": "~7.0",
         "ext-posix": "*",
         "ext-openssl": "*",
         "bramus/monolog-colored-line-formatter": "^2",
