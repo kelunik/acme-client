@@ -114,7 +114,7 @@ class Issue implements Command {
             }
         }
 
-        $path = __DIR__ . "/../../data/live/" . reset($domains);
+        $path = __DIR__ . "/../../data/live/" . $args->get("file") ?? current($domains);
 
         if (!file_exists($path) && !mkdir($path, 0700, true)) {
             throw new AcmeException("Couldn't create directory: {$path}");
@@ -248,6 +248,12 @@ class Issue implements Command {
                 "description" => "Path to the document root for ACME challenges.",
                 "required" => false,
             ],
+            "file" => [
+                "prefix" => "f",
+                "longPrefix" => "file",
+                "descript" => "Output filename",
+                "required" => false,
+            ]
         ];
     }
 }

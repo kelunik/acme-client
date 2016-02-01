@@ -62,8 +62,7 @@ class Register implements Command {
             $this->logger->info("Generating key keys ...");
 
             $keyPair = (new OpenSSLKeyGenerator)->generate(4096);
-
-            if (!mkdir($path, 0700, true)) {
+            if (!file_exists($path) && !mkdir($path, 0700, true)) {
                 throw new AcmeException("Couldn't create account directory");
             }
 
