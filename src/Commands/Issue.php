@@ -37,7 +37,14 @@ class Issue implements Command {
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
         $keyPair = (yield $keyStore->get("account/key.pem"));
-        $acme = new AcmeService(new AcmeClient(\Kelunik\AcmeClient\getServer(), $keyPair), $keyPair);
+
+        $configPath = dirname(dirname(__DIR__)) . "/data/account/config.json";
+        if (!file_exists($configPath)) {
+            throw new AcmeException("Missing account config file. Please register account by running \"bin/acme setup\"");
+        }
+        $jsonConfig = json_decode(file_get_contents($configPath, false));
+        $server = $jsonConfig->server;
+        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
         foreach ($domains as $domain) {
             list($location, $challenges) = (yield $acme->requestChallenges($domain));
