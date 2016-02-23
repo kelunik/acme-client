@@ -70,8 +70,7 @@ class Register implements Command {
             file_put_contents($pathPrivate, $keyPair->getPrivate());
             file_put_contents($pathPublic, $keyPair->getPublic());
 
-            chmod($pathPrivate, 600);
-            chmod($pathPrivate, 600);
+            chmod($pathPrivate, 0600);
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);

@@ -95,7 +95,7 @@ class Issue implements Command {
 
                 file_put_contents("{$path}/{$token}", $payload);
                 chown("{$path}/{$token}", $userInfo["uid"]);
-                chmod("{$path}/{$token}", 0660);
+                chmod("{$path}/{$token}", 0664);
 
                 yield $acme->selfVerify($domain, $token, $payload);
                 $this->logger->info("Successfully self-verified challenge.");
