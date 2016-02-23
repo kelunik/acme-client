@@ -69,7 +69,7 @@ class Register implements Command {
             chmod($pathPrivate, 0600);
         }
 
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
 

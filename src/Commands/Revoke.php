@@ -37,7 +37,7 @@ class Revoke implements Command {
         }
 
         $keyPair = $this->checkRegistration($args);
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         $this->logger->info("Revoking certificate ...");
 
