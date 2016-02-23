@@ -32,10 +32,15 @@ class Issue implements Command {
 
     private function doExecute(Manager $args): Generator {
         if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
+            $processUser = posix_getpwuid(posix_geteuid());
+            $currentUsername = $processUser['name'];
+            $user = $args->get("user") ?? $currentUsername;
+            if ($currentUsername !== $user) {
+                throw new AcmeException("Running this script with --user only works as root");
+            }
+        } else {
+            $user = $args->get("user") ?? "www-data";
         }
-
-        $user = $args->get("user") ?? "www-data";
 
         $server = $args->get("server");
         $protocol = substr($server, 0, strpos("://", $server));

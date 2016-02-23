@@ -29,10 +29,6 @@ class Register implements Command {
     }
 
     public function doExecute(Manager $args): Generator {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
-
         $email = $args->get("email");
         yield resolve($this->checkEmail($email));
 
