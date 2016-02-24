@@ -27,10 +27,6 @@ class Revoke implements Command {
     }
 
     private function doExecute(Manager $args): Generator {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
-
         $server = $args->get("server");
         $protocol = substr($server, 0, strpos("://", $server));
 
@@ -41,7 +37,7 @@ class Revoke implements Command {
         }
 
         $keyPair = $this->checkRegistration($args);
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         $this->logger->info("Revoking certificate ...");
 

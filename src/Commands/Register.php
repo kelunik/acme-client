@@ -29,10 +29,6 @@ class Register implements Command {
     }
 
     public function doExecute(Manager $args): Generator {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
-
         $email = $args->get("email");
         yield resolve($this->checkEmail($email));
 
@@ -70,11 +66,10 @@ class Register implements Command {
             file_put_contents($pathPrivate, $keyPair->getPrivate());
             file_put_contents($pathPublic, $keyPair->getPublic());
 
-            chmod($pathPrivate, 600);
-            chmod($pathPrivate, 600);
+            chmod($pathPrivate, 0600);
         }
 
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
 
