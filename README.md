@@ -6,9 +6,9 @@
 `kelunik/acme-client` is a standalone ACME client written in PHP.
 It's an alternative for the [official client](https://github.com/letsencrypt/letsencrypt) which is written in python.
 
-> **Warning**: This software is under heavy development. Use at your own risk.
+> **Warning**: This software is under development. Use at your own risk.
 
-The client has been updated on Dec 9th in a non-backwards compatible manner. Please review the changes or use a new clone.
+The client has been updated on Mar 12th in a non-backwards compatible manner. Please review the changes or use a new clone.
 
 ## Installation
 
@@ -30,26 +30,33 @@ By using this client you agree to any agreement and any further updates by conti
 You're responsible to react to updates and stop the automation if you no longer agree with the terms of service.
 
 ```
-sudo bin/acme setup \
-    --server acme-v01.api.letsencrypt.org/directory \
-    --email me@example.com
+bin/acme setup -s letsencrypt --email me@example.com
 ```
+
+`-s` / `--server` can either be a URI or a shortcut. Available shortcuts:
+ * `letsencrypt` / `letsencrypt:production`
+ * `letsencrypt:staging`
 
 After a successful registration you're able to issue certificates.
 This client assumes you have a HTTP server setup and running.
 You must have a document root setup in order to use this client.
 
 ```
-sudo bin/acme issue \
-    --domains example.com,www.example.com \
-    --path /var/www/example.com
+bin/acme issue -s letsencrypt -d example.com:www.example.com -p /var/www/example.com
 ```
-
-For renewal, just run this command again. If you want to automate this task, use `bin/acme renew` as your daily cron command.
-It will renew certificates automatically when they're no longer than 30 days valid.
 
 To revoke a certificate, you need a valid account key currently, just like for issuance.
 
 ```
-sudo bin/acme revoke --name example.com
+bin/acme revoke --name example.com
+```
+
+For renewal, there's the `bin/acme check` subcommand.
+It exists with a non-zero exit code, if the certificate is going to expire soon.
+Default check time is 30 days, but you can use `--ttl` to customize it.
+
+You may use this as daily cron:
+
+```
+bin/acme check --name example.com --ttl 30 -s letsencrypt || bin/acme issue ...
 ```
