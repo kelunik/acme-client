@@ -67,7 +67,7 @@ class KeyStore {
 
         try {
             // TODO: Replace with async version once available
-            if (!file_exists($file)) {
+            if (!file_exists(dirname($file))) {
                 mkdir(dirname($file), 0755, true);
             }
 
