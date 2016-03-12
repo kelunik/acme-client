@@ -23,7 +23,10 @@ class Check implements Command {
      * @return \Generator
      */
     private function doExecute(Manager $args) {
-        $path = dirname(dirname(__DIR__)) . "/data/certs";
+        $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
+        $server = \Kelunik\AcmeClient\serverToKeyname($server);
+
+        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $server;
         $certificateStore = new CertificateStore($path);
 
         $pem = (yield $certificateStore->get($args->get("name")));
@@ -42,6 +45,12 @@ class Check implements Command {
 
     public static function getDefinition() {
         return [
+            "server" => [
+                "prefix" => "s",
+                "longPrefix" => "server",
+                "description" => "",
+                "required" => true,
+            ],
             "name" => [
                 "longPrefix" => "name",
                 "description" => "Common name of the certificate to check.",

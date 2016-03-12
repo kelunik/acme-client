@@ -51,7 +51,7 @@ class Revoke implements Command {
         yield $acme->revokeCertificate($pem);
         $this->logger->info("Certificate has been revoked.");
 
-        yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs"))->delete($args->get("name"));
+        yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile))->delete($args->get("name"));
     }
 
     public static function getDefinition() {

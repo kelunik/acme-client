@@ -116,7 +116,7 @@ class Issue implements Command {
         $location = (yield $acme->requestCertificate($keyPair, $domains));
         $certificates = (yield $acme->pollForCertificate($location));
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs";
+        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile;
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
