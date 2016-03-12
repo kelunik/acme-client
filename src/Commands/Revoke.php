@@ -36,11 +36,13 @@ class Revoke implements Command {
 
         $this->logger->info("Revoking certificate ...");
 
+        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile . "/" . $args->get("name") . "/cert.pem";
+
         try {
-            $pem = (yield \Amp\File\get(dirname(dirname(__DIR__)) . "/data/certs/" . $args->get("name") . "/cert.pem"));
+            $pem = (yield \Amp\File\get($path));
             $cert = new Certificate($pem);
         } catch (FilesystemException $e) {
-            throw new \RuntimeException("There's no such certificate!");
+            throw new \RuntimeException("There's no such certificate (" . $path . ")");
         }
 
         if ($cert->getValidTo() < time()) {
