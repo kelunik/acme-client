@@ -10,7 +10,7 @@
         "kelunik/certificate": "^1",
         "league/climate": "^3",
         "monolog/monolog": "^1.17",
-        "php": ">=5.5",
+        "php": "^5.5|^7",
         "psr/log": "^1",
         "rdlowrey/auryn": "^1",
         "webmozart/assert": "^1"
