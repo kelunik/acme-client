@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use Psr\Log\LoggerInterface;
@@ -22,13 +23,10 @@ class Check implements Command {
      * @return \Generator
      */
     private function doExecute(Manager $args) {
-        $path = $args->get("cert");
+        $path = dirname(dirname(__DIR__)) . "/data/certs";
+        $certificateStore = new CertificateStore($path);
 
-        if (!realpath($path)) {
-            throw new \RuntimeException("Certificate doesn't exist: '{$path}'");
-        }
-
-        $pem = (yield \Amp\File\get($path));
+        $pem = (yield $certificateStore->get($args->get("name")));
         $cert = new Certificate($pem);
 
         $this->logger->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
@@ -44,10 +42,9 @@ class Check implements Command {
 
     public static function getDefinition() {
         return [
-            "cert" => [
-                "longPrefix" => "cert",
-                "prefix" => "c",
-                "description" => "Certificate to check.",
+            "name" => [
+                "longPrefix" => "name",
+                "description" => "Common name of the certificate to check.",
                 "required" => true,
             ],
             "ttl" => [

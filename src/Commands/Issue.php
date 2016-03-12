@@ -120,10 +120,6 @@ class Issue implements Command {
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
-        yield \Amp\File\put($path . "/" . reset($domains) . "/config.json", json_encode([
-                "domains" => $domains, "path" => $args->get("path"), "user" => $user, "bits" => $bits,
-            ], JSON_PRETTY_PRINT) . "\n");
-
         $this->logger->info("Successfully issued certificate, see {$path}/" . reset($domains));
     }
 

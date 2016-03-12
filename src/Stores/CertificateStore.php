@@ -18,6 +18,20 @@ class CertificateStore {
         $this->root = rtrim(str_replace("\\", "/", $root), "/");
     }
 
+    public function get($name) {
+        return \Amp\resolve($this->doGet($name));
+    }
+
+    private function doGet($name) {
+        Assert::string($name, "Name must be a string. Got: %s");
+
+        try {
+            return yield \Amp\File\get($this->root . "/" . $name . "/cert.pem");
+        } catch (FilesystemException $e) {
+            throw new CertificateStoreException("Failed to load certificate.", 0, $e);
+        }
+    }
+
     public function put(array $certificates) {
         return \Amp\resolve($this->doPut($certificates));
     }
