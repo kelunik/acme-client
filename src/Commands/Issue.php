@@ -108,7 +108,7 @@ class Issue implements Command {
             }
         }
 
-        $path = "certs/" . reset($domains) . "/key.pem";
+        $path = "certs/" . $keyFile . "/" . reset($domains) . "/key.pem";
         $bits = $args->get("bits");
 
         try {
