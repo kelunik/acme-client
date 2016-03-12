@@ -9,6 +9,18 @@ use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
 use Psr\Log\LoggerInterface;
 
+if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
+    echo <<<HELP
+
+    You need to install the composer dependencies.
+
+    composer install
+
+
+HELP;
+    exit(-1);
+}
+
 require __DIR__ . "/../vendor/autoload.php";
 
 $commands = [
