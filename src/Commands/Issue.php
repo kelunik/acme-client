@@ -70,7 +70,7 @@ class Issue implements Command {
             }
 
             $this->logger->debug("Generating payload...");
-            $payload = $acme->generateHttp01Payload($token, $keyPair);
+            $payload = $acme->generateHttp01Payload($keyPair, $token);
 
             $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
             $docRoot = rtrim(str_replace("\\", "/", $args->get("path")), "/");
