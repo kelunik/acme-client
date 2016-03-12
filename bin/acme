@@ -12,9 +12,14 @@ use Psr\Log\LoggerInterface;
 if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
     echo <<<HELP
 
+      ____ __________ ___  ___
+     / __ `/ ___/ __ `__ \/ _ \
+    / /_/ / /__/ / / / / /  __/
+    \__,_/\___/_/ /_/ /_/\___/
+
     You need to install the composer dependencies.
 
-    composer install
+    composer install --no-dev
 
 
 HELP;

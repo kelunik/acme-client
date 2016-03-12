@@ -50,8 +50,8 @@ function resolveServer($uri) {
 
 function serverToKeyname($server) {
     $keyFile = str_replace("/", ".", $server);
-    $keyFile = preg_replace("[^a-z0-9._-]", "", $keyFile);
-    $keyFile = preg_replace("\\.+", ".", $keyFile);
+    $keyFile = preg_replace("@[^a-z0-9._-]@", "", $keyFile);
+    $keyFile = preg_replace("@\\.+@", ".", $keyFile);
 
     return $keyFile;
 }
