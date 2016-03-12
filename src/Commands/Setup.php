@@ -33,7 +33,7 @@ class Setup implements Command {
         $email = $args->get("email");
         yield \Amp\resolve($this->checkEmail($email));
 
-        $server = $args->get("server");
+        $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
         $path = "accounts/{$keyFile}.pem";
@@ -58,15 +58,10 @@ class Setup implements Command {
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
         $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
+
         /** @var Registration $registration */
         $registration = (yield $acme->register($email));
         $this->logger->notice("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
-
-        yield \Amp\File\put(dirname(dirname(__DIR__)) . "/data/account/config.json", json_encode([
-            "version" => 1,
-            "server" => $server,
-            "email" => $email,
-        ], JSON_PRETTY_PRINT) . "\n");
     }
 
     private function checkEmail($email) {

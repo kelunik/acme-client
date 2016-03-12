@@ -28,7 +28,7 @@ class Revoke implements Command {
     private function doExecute(Manager $args) {
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        $server = $args->get("server");
+        $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
         $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
