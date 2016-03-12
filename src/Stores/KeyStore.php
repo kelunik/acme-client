@@ -73,7 +73,6 @@ class KeyStore {
 
             yield \Amp\File\put($file, $keyPair->getPrivate());
             yield \Amp\File\chmod($file, 0600);
-            yield \Amp\File\chown($file, 0, 0);
         } catch (FilesystemException $e) {
             throw new KeyStoreException("Could not save key.", 0, $e);
         }
