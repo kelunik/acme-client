@@ -67,7 +67,7 @@ class KeyStore {
 
         try {
             // TODO: Replace with async version once available
-            mkdir(dirname($file), 0770, true);
+            mkdir(dirname($file), 0755, true);
 
             yield \Amp\File\put($file, $keyPair->getPrivate());
             yield \Amp\File\chmod($file, 0600);

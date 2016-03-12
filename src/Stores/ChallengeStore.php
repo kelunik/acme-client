@@ -2,9 +2,8 @@
 
 namespace Kelunik\AcmeClient\Stores;
 
-use Amp\Promise;
-use Generator;
 use InvalidArgumentException;
+use Webmozart\Assert\Assert;
 
 class ChallengeStore {
     private $docroot;
@@ -17,34 +16,14 @@ class ChallengeStore {
         $this->docroot = rtrim(str_replace("\\", "/", $docroot), "/");
     }
 
-    public function put($token, $payload, $user) {
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        if (!is_string($user)) {
-            throw new InvalidArgumentException(sprintf("\$user must be of type string, %s given.", gettype($user)));
-        }
-
+    public function put($token, $payload, $user = null) {
         return \Amp\resolve($this->doPut($token, $payload, $user));
     }
 
-    private function doPut($token, $payload, $user) {
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
-        if (!is_string($payload)) {
-            throw new InvalidArgumentException(sprintf("\$payload must be of type string, %s given.", gettype($payload)));
-        }
-
-        if (!is_string($user)) {
-            throw new InvalidArgumentException(sprintf("\$user must be of type string, %s given.", gettype($user)));
-        }
+    private function doPut($token, $payload, $user = null) {
+        Assert::string($token, "Token must be a string. Got: %s");
+        Assert::string($payload, "Payload must be a string. Got: %s");
+        Assert::nullOrString($user, "User must be a string or null. Got: %s");
 
         $path = $this->docroot . "/.well-known/acme-challenge";
         $realpath = realpath($path);
@@ -53,36 +32,36 @@ class ChallengeStore {
             throw new ChallengeStoreException("Document root doesn't exist: '{$this->docroot}'");
         }
 
-        if (!$realpath && !@mkdir($path, 0770, true)) {
+        if (!$realpath && !@mkdir($path, 0755, true)) {
             throw new ChallengeStoreException("Couldn't create public directory to serve the challenges: '{$path}'");
         }
 
-        if (!$userInfo = posix_getpwnam($user)) {
-            throw new ChallengeStoreException("Unknown user: '{$user}'");
+        if ($user) {
+            if (!$userInfo = posix_getpwnam($user)) {
+                throw new ChallengeStoreException("Unknown user: '{$user}'");
+            }
         }
 
-        // TODO: Make async, see https://github.com/amphp/file/issues/6
-        chown($this->docroot . "/.well-known", $userInfo["uid"]);
-        chown($this->docroot . "/.well-known/acme-challenge", $userInfo["uid"]);
+        if (isset($userInfo)) {
+            yield \Amp\File\chown($this->docroot . "/.well-known", $userInfo["uid"], -1);
+            yield \Amp\File\chown($this->docroot . "/.well-known/acme-challenge", $userInfo["uid"], -1);
+        }
 
         yield \Amp\File\put("{$path}/{$token}", $payload);
 
-        chown("{$path}/{$token}", $userInfo["uid"]);
-        chmod("{$path}/{$token}", 0660);
+        if (isset($userInfo)) {
+            yield \Amp\File\chown("{$path}/{$token}", $userInfo["uid"], -1);
+        }
+
+        yield \Amp\File\chmod("{$path}/{$token}", 0644);
     }
 
     public function delete($token) {
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
-
         return \Amp\resolve($this->doDelete($token));
     }
 
     private function doDelete($token) {
-        if (!is_string($token)) {
-            throw new InvalidArgumentException(sprintf("\$token must be of type string, %s given.", gettype($token)));
-        }
+        Assert::string($token, "Token must be a string. Got: %s");
 
         $path = $this->docroot . "/.well-known/acme-challenge/{$token}";
         $realpath = realpath($path);

@@ -29,15 +29,30 @@ class Issue implements Command {
     }
 
     private function doExecute(Manager $args) {
-        $domains = array_map("trim", explode(",", $args->get("domains")));
-        yield \Amp\resolve($this->checkDnsRecords($domains));
+        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+            if (posix_geteuid() !== 0) {
+                $processUser = posix_getpwnam(posix_geteuid());
+                $currentUsername = $processUser["name"];
+                $user = $args->get("user") ?: $currentUsername;
 
-        $user = $args->get("user") ?: "www-data";
+                if ($currentUsername !== $user) {
+                    throw new AcmeException("Running this script with --user only works as root!");
+                }
+            } else {
+                $user = $args->get("user") ?: "www-data";
+            }
+        }
+
+        $domains = array_map("trim", explode(":", $args->get("domains")));
+        yield \Amp\resolve($this->checkDnsRecords($domains));
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        $keyPair = (yield $keyStore->get("account/key.pem"));
-        $acme = new AcmeService(new AcmeClient(\Kelunik\AcmeClient\getServer(), $keyPair), $keyPair);
+        $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
+        $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
+
+        $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         foreach ($domains as $domain) {
             list($location, $challenges) = (yield $acme->requestChallenges($domain));
@@ -51,11 +66,11 @@ class Issue implements Command {
             $token = $challenge->token;
 
             if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
-                throw new AcmeException("Protocol Violation: Invalid Token!");
+                throw new AcmeException("Protocol violation: Invalid Token!");
             }
 
             $this->logger->debug("Generating payload...");
-            $payload = $acme->generateHttp01Payload($token);
+            $payload = $acme->generateHttp01Payload($token, $keyPair);
 
             $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
             $docRoot = rtrim(str_replace("\\", "/", $args->get("path")), "/");
@@ -63,9 +78,9 @@ class Issue implements Command {
             $challengeStore = new ChallengeStore($docRoot);
 
             try {
-                $challengeStore->put($token, $payload, $user);
+                $challengeStore->put($token, $payload, isset($user) ? $user : null);
 
-                yield $acme->selfVerify($domain, $token, $payload);
+                yield $acme->verifyHttp01Challenge($domain, $token, $payload);
                 $this->logger->info("Successfully self-verified challenge.");
 
                 yield $acme->answerChallenge($challenge->uri, $payload);
@@ -87,7 +102,7 @@ class Issue implements Command {
         }
 
         $path = "certs/" . reset($domains) . "/key.pem";
-        $bits = $args->get("bits") ?: 2048;
+        $bits = $args->get("bits");
 
         try {
             $keyPair = (yield $keyStore->get($path));
@@ -153,23 +168,28 @@ class Issue implements Command {
 
     public static function getDefinition() {
         return [
+            "server" => [
+                "prefix" => "s",
+                "longPrefix" => "server",
+                "description" => "Server to use for issuance, see also 'bin/acme setup'.",
+                "required" => true,
+            ],
             "domains" => [
                 "prefix" => "d",
                 "longPrefix" => "domains",
-                "description" => "Comma separated list of domains to request a certificate for.",
+                "description" => "Colon separated list of domains to request a certificate for.",
                 "required" => true,
             ],
             "path" => [
                 "prefix" => "p",
                 "longPrefix" => "path",
-                "description" => "Absolute path to the document root of these domains.",
+                "description" => "Colon separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
                 "required" => true,
             ],
             "user" => [
                 "prefix" => "u",
                 "longPrefix" => "user",
                 "description" => "User running the web server.",
-                "defaultValue" => "www-data",
             ],
             "bits" => [
                 "longPrefix" => "bits",

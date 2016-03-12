@@ -6,13 +6,14 @@
         "bramus/monolog-colored-line-formatter": "^2",
         "ext-posix": "*",
         "ext-openssl": "*",
-        "kelunik/acme": "^0.2",
-        "kelunik/certificate": "^0.2",
+        "kelunik/acme": "^0.3",
+        "kelunik/certificate": "^1",
         "league/climate": "^3",
         "monolog/monolog": "^1.17",
         "php": ">=5.5",
         "psr/log": "^1",
-        "rdlowrey/auryn": "^1"
+        "rdlowrey/auryn": "^1",
+        "webmozart/assert": "^1"
     },
     "license": "MIT",
     "authors": [
@@ -26,6 +27,12 @@
     "autoload": {
         "psr-4": {
             "Kelunik\\AcmeClient\\": "src"
-        }
+        },
+        "files": [
+            "src/functions.php"
+        ]
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^5"
     }
 }

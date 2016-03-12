@@ -14,7 +14,7 @@ require __DIR__ . "/../vendor/autoload.php";
 $commands = [
     "setup",
     "issue",
-    "renew",
+    "check",
     "revoke",
 ];
 
@@ -53,7 +53,14 @@ if (count($argv) === 1 || in_array($argv[1], ["h", "-h", "help", "--help"], true
 }
 
 if (!in_array($argv[1], $commands)) {
-    $climate->error("Unknown command '{$argv[1]}', use --help for a list of available commands.");
+    $climate->error("Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
+
+    $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], $commands);
+
+    if ($suggestion) {
+        $climate->br()->info("    Did you mean '$suggestion'?")->br();
+    }
+
     exit(1);
 }
 
@@ -70,17 +77,12 @@ try {
 } catch (Exception $e) {
     if (count($argv) === 3 && in_array($argv[2], ["h", "-h", "--help", "help"], true)) {
         $climate->usage(["bin/acme {$argv[1]}"]);
+        $climate->br();
         exit(0);
     } else {
         $climate->error($e->getMessage());
         exit(1);
     }
-}
-
-if (posix_geteuid() !== 0) { // TODO: Windows?
-    $climate->error("Please run this script as root.");
-
-    exit(1);
 }
 
 $handler = new StreamHandler("php://stdout", Logger::DEBUG);

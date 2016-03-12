@@ -26,14 +26,13 @@ class Revoke implements Command {
     }
 
     private function doExecute(Manager $args) {
-        if (posix_geteuid() !== 0) {
-            throw new AcmeException("Please run this script as root!");
-        }
-
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
-        $keyPair = (yield $keyStore->get("account/key.pem"));
-        $acme = new AcmeService(new AcmeClient(\Kelunik\AcmeClient\getServer(), $keyPair), $keyPair);
+        $server = $args->get("server");
+        $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
+
+        $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
+        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
         $this->logger->info("Revoking certificate ...");
 
@@ -57,6 +56,12 @@ class Revoke implements Command {
 
     public static function getDefinition() {
         return [
+            "server" => [
+                "prefix" => "s",
+                "longPrefix" => "server",
+                "description" => "",
+                "required" => true,
+            ],
             "name" => [
                 "longPrefix" => "name",
                 "description" => "Common name of the certificate to be revoked.",

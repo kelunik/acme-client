@@ -34,15 +34,9 @@ class Setup implements Command {
         yield \Amp\resolve($this->checkEmail($email));
 
         $server = $args->get("server");
-        $protocol = substr($server, 0, strpos("://", $server));
+        $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
-        if (!$protocol || $protocol === $server) {
-            $server = "https://" . $server;
-        } elseif ($protocol !== "https") {
-            throw new \InvalidArgumentException("Invalid protocol, only https is allowed!");
-        }
-
-        $path = "account/key.pem";
+        $path = "accounts/{$keyFile}.pem";
         $bits = 4096;
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");

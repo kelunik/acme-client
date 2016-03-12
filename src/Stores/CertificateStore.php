@@ -5,6 +5,7 @@ namespace Kelunik\AcmeClient\Stores;
 use Amp\File\FilesystemException;
 use InvalidArgumentException;
 use Kelunik\Certificate\Certificate;
+use Webmozart\Assert\Assert;
 
 class CertificateStore {
     private $root;
@@ -43,38 +44,29 @@ class CertificateStore {
             $path = $this->root . "/" . $commonName;
             $realpath = realpath($path);
 
-            if (!$realpath && !mkdir($path, 0770, true)) {
+            if (!$realpath && !mkdir($path, 0775, true)) {
                 throw new FilesystemException("Couldn't create certificate directory: '{$path}'");
             }
 
             yield \Amp\File\put($path . "/cert.pem", $certificates[0]);
-            yield \Amp\File\chown($path . "/cert.pem", 0, 0);
-            yield \Amp\File\chmod($path . "/cert.pem", 0640);
+            yield \Amp\File\chmod($path . "/cert.pem", 0644);
 
             yield \Amp\File\put($path . "/fullchain.pem", implode("\n", $certificates));
-            yield \Amp\File\chown($path . "/fullchain.pem", 0, 0);
-            yield \Amp\File\chmod($path . "/fullchain.pem", 0640);
+            yield \Amp\File\chmod($path . "/fullchain.pem", 0644);
 
             yield \Amp\File\put($path . "/chain.pem", implode("\n", $chain));
-            yield \Amp\File\chown($path . "/chain.pem", 0, 0);
-            yield \Amp\File\chmod($path . "/chain.pem", 0640);
+            yield \Amp\File\chmod($path . "/chain.pem", 0644);
         } catch (FilesystemException $e) {
             throw new CertificateStoreException("Couldn't save certificates for '{$commonName}'", 0, $e);
         }
     }
 
     public function delete($name) {
-        if (!is_string($name)) {
-            throw new InvalidArgumentException(sprintf("\$name must be of type string, %s given.", gettype($name)));
-        }
-
         return \Amp\resolve($this->doDelete($name));
     }
 
     private function doDelete($name) {
-        if (!is_string($name)) {
-            throw new InvalidArgumentException(sprintf("\$name must be of type string, %s given.", gettype($name)));
-        }
+        Assert::string($name, "Name must be a string. Got: %s");
 
         foreach ((yield \Amp\File\scandir($this->root . "/" . $name)) as $file) {
             yield \Amp\File\unlink($this->root . "/" . $name . "/" . $file);
