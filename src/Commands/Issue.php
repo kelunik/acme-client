@@ -51,7 +51,14 @@ class Issue implements Command {
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
-        $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
+        try {
+            $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
+        } catch (KeyStoreException $e) {
+            $this->logger->error("Account key not found, did you run 'bin/acme setup'?");
+
+            exit(1);
+        }
+
         $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
         foreach ($domains as $domain) {
