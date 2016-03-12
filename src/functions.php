@@ -49,7 +49,7 @@ function resolveServer($uri) {
 }
 
 function serverToKeyname($server) {
-    $server = substr($server, strpos("://", $server) + 3);
+    $server = substr($server, strpos($server, "://") + 3);
 
     $keyFile = str_replace("/", ".", $server);
     $keyFile = preg_replace("@[^a-z0-9._-]@", "", $keyFile);
