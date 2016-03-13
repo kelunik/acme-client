@@ -1,6 +1,14 @@
 {
     "name": "kelunik/acme-client",
     "description": "Standalone PHP ACME client.",
+    "keywords": [
+        "ACME",
+        "letsencrypt",
+        "https",
+        "encryption",
+        "ssl",
+        "tls"
+    ],
     "require": {
         "amphp/process": "^0.1.1",
         "bramus/monolog-colored-line-formatter": "^2",
