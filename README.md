@@ -12,9 +12,12 @@ The client has been updated on Mar 12th in a non-backwards compatible manner. Pl
 
 ## Installation
 
-** Requirements
+**Requirements**
 
 * PHP 5.5+
+* Composer
+
+**Instructions**
 
 ```
 # Clone repository
