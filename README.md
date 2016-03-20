@@ -111,3 +111,25 @@ You may use this as daily cron:
 ```
 bin/acme check --name example.com --ttl 30 -s letsencrypt || bin/acme issue ...
 ```
+
+You can also use a more advanced script to automatically reload the server as well.
+
+```bash
+#!/usr/bin/env bash
+
+cd /git/kelunik/acme-client
+
+bin/acme check --name example.com --ttl 30 -s letsencrypt
+
+if [ $? -eq 1 ]; then
+        bin/acme issue -d example.com:www.example.com -p /var/www -s letsencrypt
+
+        if [ $? -eq 0 ]; then
+                nginx -t -q
+
+                if [ $? -eq 0 ]; then
+                        nginx -s reload
+                fi
+        fi
+fi
+```
