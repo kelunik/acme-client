@@ -17,8 +17,13 @@ The client has been updated on Mar 12th in a non-backwards compatible manner. Pl
 * PHP 5.5+
 
 ```
-git clone https://github.com/kelunik/acme-client
-cd acme-client
+# Clone repository
+git clone https://github.com/kelunik/acme-client && cd acme-client
+
+# Checkout latest release
+git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
+
+# Install dependencies
 composer install --no-dev
 ```
 
