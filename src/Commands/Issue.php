@@ -43,7 +43,7 @@ class Issue implements Command {
             }
         }
 
-        $domains = array_map("trim", explode(":", $args->get("domains")));
+        $domains = array_map("trim", explode(":", str_replace(",", ":", $args->get("domains"))));
         yield \Amp\resolve($this->checkDnsRecords($domains));
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
