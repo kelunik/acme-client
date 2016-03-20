@@ -12,10 +12,51 @@ The client has been updated on Mar 12th in a non-backwards compatible manner. Pl
 
 ## Installation
 
+** Requirements
+
+* PHP 5.5+
+
 ```
 git clone https://github.com/kelunik/acme-client
 cd acme-client
-composer install
+composer install --no-dev
+```
+
+## Migration from 0.1.x to 0.2.x
+
+```
+# in ./data
+
+# Move your account key to new location:
+
+mkdir accounts
+mv account/key.pem accounts/acme-v01.api.letsencrypt.org.directory.pem
+# or accounts/acme-staging.api.letsencrypt.org.directory.pem if it's a staging key
+
+# account should now be empty or contain just a config.json, you can delete the folder then
+rm -rf account
+
+# Migrate certificates to new location:
+
+cd certs
+mkdir acme-v01.api.letsencrypt.org.directory
+
+# Move all your certificate directories
+# Repeat for all directories!
+mv example.com acme-v01.api.letsencrypt.org.directory
+# or acme-staging.api.letsencrypt.org.directory
+
+# Delete all config.json files which may exist
+find -name "config.json" | xargs rm
+
+# Update to current version
+git checkout master && git pull
+
+# Check out latest release
+git checkout $(git describe --tags `git rev-list --tags --max-count=1`)
+
+# Update dependencies
+composer update --no-dev
 ```
 
 ## Usage

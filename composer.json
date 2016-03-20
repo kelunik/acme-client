@@ -13,7 +13,6 @@
     "require": {
         "amphp/process": "^0.1.1",
         "bramus/monolog-colored-line-formatter": "^2",
-        "ext-posix": "*",
         "ext-openssl": "*",
         "kelunik/acme": "^0.3",
         "kelunik/certificate": "^1",
@@ -42,6 +41,16 @@
         ]
     },
     "require-dev": {
-        "phpunit/phpunit": "^5"
+        "phpunit/phpunit": "^5",
+        "macfja/phar-builder": "dev-master"
+    },
+    "extra": {
+        "phar-builder": {
+            "compression": "GZip",
+            "name": "acme.phar",
+            "output-dir": "build",
+            "include": ["bin", "src", "vendor"],
+            "entry-point": "bin/acme"
+        }
     }
 }
