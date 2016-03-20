@@ -8,8 +8,6 @@ It's an alternative for the [official client](https://github.com/letsencrypt/let
 
 > **Warning**: This software is under development. Use at your own risk.
 
-The client has been updated on Mar 12th in a non-backwards compatible manner. Please review the changes or use a new clone.
-
 ## Installation
 
 **Requirements**
@@ -19,7 +17,7 @@ The client has been updated on Mar 12th in a non-backwards compatible manner. Pl
 
 **Instructions**
 
-```
+```bash
 # Clone repository
 git clone https://github.com/kelunik/acme-client && cd acme-client
 
@@ -32,8 +30,9 @@ composer install --no-dev
 
 ## Migration from 0.1.x to 0.2.x
 
-```
-# in ./data
+```bash
+# Start in ./data
+cd data
 
 # Move your account key to new location:
 
