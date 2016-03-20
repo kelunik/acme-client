@@ -46,6 +46,19 @@ class Issue implements Command {
         $domains = array_map("trim", explode(":", str_replace(",", ":", $args->get("domains"))));
         yield \Amp\resolve($this->checkDnsRecords($domains));
 
+        $docRoots = explode(":", str_replace("\\", "/", $args->get("path")));
+        $docRoots = array_map(function($root) {
+            return rtrim($root, "/");
+        }, $docRoots);
+
+        if (count($domains) < count($docRoots)) {
+            throw new AcmeException("Specified more document roots than domains.");
+        }
+
+        if (count($domains) > count($docRoots)) {
+            $docRoots = array_fill(count($docRoots), count($domains) - count($docRoots), end($docRoots));
+        }
+
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
@@ -61,7 +74,7 @@ class Issue implements Command {
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
-        foreach ($domains as $domain) {
+        foreach ($domains as $i => $domain) {
             list($location, $challenges) = (yield $acme->requestChallenges($domain));
             $goodChallenges = $this->findSuitableCombination($challenges);
 
@@ -80,9 +93,9 @@ class Issue implements Command {
             $payload = $acme->generateHttp01Payload($keyPair, $token);
 
             $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
-            $docRoot = rtrim(str_replace("\\", "/", $args->get("path")), "/");
 
-            $challengeStore = new ChallengeStore($docRoot);
+
+            $challengeStore = new ChallengeStore($docRoots[$i]);
 
             try {
                 $challengeStore->put($token, $payload, isset($user) ? $user : null);
