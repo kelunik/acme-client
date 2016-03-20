@@ -2,11 +2,13 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CombinatorException;
 use Amp\Dns\Record;
 use Exception;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
+use Kelunik\Acme\KeyPair;
 use Kelunik\Acme\OpenSSLKeyGenerator;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\ChallengeStore;
@@ -77,51 +79,20 @@ class Issue implements Command {
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair));
 
+        $promises = [];
+
         foreach ($domains as $i => $domain) {
-            list($location, $challenges) = (yield $acme->requestChallenges($domain));
-            $goodChallenges = $this->findSuitableCombination($challenges);
+            $promises[] = \Amp\resolve($this->solveChallenge($acme, $keyPair, $domain, $docRoots[$i]));
+        }
 
-            if (empty($goodChallenges)) {
-                throw new AcmeException("Couldn't find any combination of challenges which this client can solve!");
+        list($errors) = (yield \Amp\any($promises));
+
+        if (!empty($errors)) {
+            foreach ($errors as $error) {
+                $this->logger->error($error->getMessage());
             }
 
-            $challenge = $challenges->challenges[reset($goodChallenges)];
-            $token = $challenge->token;
-
-            if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
-                throw new AcmeException("Protocol violation: Invalid Token!");
-            }
-
-            $this->logger->debug("Generating payload...");
-            $payload = $acme->generateHttp01Payload($keyPair, $token);
-
-            $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
-
-
-            $challengeStore = new ChallengeStore($docRoots[$i]);
-
-            try {
-                $challengeStore->put($token, $payload, isset($user) ? $user : null);
-
-                yield $acme->verifyHttp01Challenge($domain, $token, $payload);
-                $this->logger->info("Successfully self-verified challenge.");
-
-                yield $acme->answerChallenge($challenge->uri, $payload);
-                $this->logger->info("Answered challenge... waiting");
-
-                yield $acme->pollForChallenge($location);
-                $this->logger->info("Challenge successful. {$domain} is now authorized.");
-
-                yield $challengeStore->delete($token);
-            } catch (Exception $e) {
-                // no finally because generators...
-                yield $challengeStore->delete($token);
-                throw $e;
-            } catch (Throwable $e) {
-                // no finally because generators...
-                yield $challengeStore->delete($token);
-                throw $e;
-            }
+            throw new AcmeException("Issuance failed, not all challenges could be solved.");
         }
 
         $path = "certs/" . $keyFile . "/" . reset($domains) . "/key.pem";
@@ -144,6 +115,53 @@ class Issue implements Command {
         yield $certificateStore->put($certificates);
 
         $this->logger->info("Successfully issued certificate, see {$path}/" . reset($domains));
+    }
+
+    private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {
+        list($location, $challenges) = (yield $acme->requestChallenges($domain));
+        $goodChallenges = $this->findSuitableCombination($challenges);
+
+        if (empty($goodChallenges)) {
+            throw new AcmeException("Couldn't find any combination of challenges which this client can solve!");
+        }
+
+        $challenge = $challenges->challenges[reset($goodChallenges)];
+        $token = $challenge->token;
+
+        if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
+            throw new AcmeException("Protocol violation: Invalid Token!");
+        }
+
+        $this->logger->debug("Generating payload...");
+        $payload = $acme->generateHttp01Payload($keyPair, $token);
+
+        $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
+
+
+        $challengeStore = new ChallengeStore($path);
+
+        try {
+            $challengeStore->put($token, $payload, isset($user) ? $user : null);
+
+            yield $acme->verifyHttp01Challenge($domain, $token, $payload);
+            $this->logger->info("Successfully self-verified challenge.");
+
+            yield $acme->answerChallenge($challenge->uri, $payload);
+            $this->logger->info("Answered challenge... waiting");
+
+            yield $acme->pollForChallenge($location);
+            $this->logger->info("Challenge successful. {$domain} is now authorized.");
+
+            yield $challengeStore->delete($token);
+        } catch (Exception $e) {
+            // no finally because generators...
+            yield $challengeStore->delete($token);
+            throw $e;
+        } catch (Throwable $e) {
+            // no finally because generators...
+            yield $challengeStore->delete($token);
+            throw $e;
+        }
     }
 
     private function checkDnsRecords($domains) {
