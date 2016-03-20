@@ -56,7 +56,10 @@ class Issue implements Command {
         }
 
         if (count($domains) > count($docRoots)) {
-            $docRoots = array_fill(count($docRoots), count($domains) - count($docRoots), end($docRoots));
+            $docRoots = array_merge(
+                $docRoots,
+                array_fill(count($docRoots), count($domains) - count($docRoots), end($docRoots))
+            );
         }
 
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
