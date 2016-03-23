@@ -196,15 +196,9 @@ class Issue implements Command {
     }
 
     public static function getDefinition() {
-        $isPhar = \Kelunik\AcmeClient\isPhar();
-
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for registration and issuance of certificates.",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "domains" => [
                 "prefix" => "d",
                 "longPrefix" => "domains",
@@ -228,12 +222,6 @@ class Issue implements Command {
                 "defaultValue" => 2048,
                 "castTo" => "int",
             ],
-            "storage" => [
-                "longPrefix" => "storage",
-                "description" => "Storage directory for account keys and certificates.",
-                "required" => $isPhar,
-                "defaultValue" => $isPhar ? null : (__DIR__ . "/../../data")
-            ]
         ];
     }
 }

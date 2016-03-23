@@ -44,15 +44,9 @@ class Check implements Command {
     }
 
     public static function getDefinition() {
-        $isPhar = \Kelunik\AcmeClient\isPhar();
-
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for registration and issuance of certificates.",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "name" => [
                 "longPrefix" => "name",
                 "description" => "Common name of the certificate to check.",
@@ -64,12 +58,6 @@ class Check implements Command {
                 "defaultValue" => 30,
                 "castTo" => "int",
             ],
-            "storage" => [
-                "longPrefix" => "storage",
-                "description" => "Storage directory for account keys and certificates.",
-                "required" => $isPhar,
-                "defaultValue" => $isPhar ? null : (__DIR__ . "/../../data")
-            ]
         ];
     }
 }

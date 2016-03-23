@@ -70,3 +70,33 @@ function isPhar() {
 function normalizePath($path) {
     return rtrim(str_replace("\\", "/", $path), "/");
 }
+
+function getArgumentDescription($argument) {
+    $isPhar = \Kelunik\AcmeClient\isPhar();
+
+    switch ($argument) {
+        case "server":
+            return [
+                "prefix" => "s",
+                "longPrefix" => "server",
+                "description" => "ACME server to use for registration and issuance of certificates.",
+                "required" => true,
+            ];
+
+        case "storage":
+            $argument = [
+                "longPrefix" => "storage",
+                "description" => "Storage directory for account keys and certificates.",
+                "required" => $isPhar,
+            ];
+
+            if (!$isPhar) {
+                $argument["defaultValue"] = dirname(__DIR__) . "/data";
+            }
+
+            return $argument;
+
+        default:
+            throw new \InvalidArgumentException("Unknown argument: " . $argument);
+    }
+}

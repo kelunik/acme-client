@@ -23,7 +23,7 @@
     "require-dev": {
         "phpunit/phpunit": "^5",
         "fabpot/php-cs-fixer": "^1.9",
-        "macfja/phar-builder": "^0.2.3"
+        "macfja/phar-builder": "dev-master#bf48160bd6bdf702557ff213e6837710c1dbf572"
     },
     "license": "MIT",
     "authors": [
@@ -47,7 +47,7 @@
             "compression": "GZip",
             "name": "acme.phar",
             "output-dir": "build",
-            "include": ["bin", "src", "vendor"],
+            "include": ["src"],
             "entry-point": "bin/acme"
         }
     }
