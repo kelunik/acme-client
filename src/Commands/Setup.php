@@ -39,25 +39,28 @@ class Setup implements Command {
 
         $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
 
+        $this->climate->br();
+
         try {
             $keyPair = (yield $keyStore->get($path));
-            $this->climate->info("Existing private key successfully loaded.");
+            $this->climate->whisper("    Using existing private key ...");
         } catch (KeyStoreException $e) {
-            $this->climate->info("No private key found, generating new one ...");
+            $this->climate->whisper("    No private key found, generating new one ...");
 
             $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
             $keyPair = (yield $keyStore->put($path, $keyPair));
 
-            $this->climate->info("Generated new private key with {$bits} bits.");
+            $this->climate->whisper("    Generated new private key with {$bits} bits.");
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
-        $this->climate->info("Registering with ACME server " . substr($server, 8) . " ...");
+        $this->climate->whisper("    Registering with " . substr($server, 8) . " ...");
 
         /** @var Registration $registration */
         $registration = (yield $acme->register($email));
-        $this->climate->whisper("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
+        $this->climate->info("    Registration successful. Contacts: " . implode(", ", $registration->getContact()));
+        $this->climate->br();
 
         yield new CoroutineResult(0);
     }

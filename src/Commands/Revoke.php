@@ -32,7 +32,8 @@ class Revoke implements Command {
         $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
-        $this->climate->info("Revoking certificate ...");
+        $this->climate->br();
+        $this->climate->whisper("    Revoking certificate ...");
 
         $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile . "/" . $args->get("name") . "/cert.pem";
 
@@ -44,12 +45,17 @@ class Revoke implements Command {
         }
 
         if ($cert->getValidTo() < time()) {
-            $this->climate->info("Certificate did already expire, no need to revoke it.");
+            $this->climate->comment("    Certificate did already expire, no need to revoke it.");
         }
 
-        $this->climate->info("Certificate was valid for: " . implode(", ", $cert->getNames()));
+        $names = $cert->getNames();
+        $this->climate->whisper("    Certificate was valid for " . count($names) . " domains.");
+        $this->climate->whisper("     - " . implode(PHP_EOL . "     - ", $names) . PHP_EOL);
+
         yield $acme->revokeCertificate($pem);
-        $this->climate->info("Certificate has been revoked.");
+
+        $this->climate->br();
+        $this->climate->info("    Certificate has been revoked.");
 
         yield (new CertificateStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")). "/certs/" . $keyFile))->delete($args->get("name"));
 

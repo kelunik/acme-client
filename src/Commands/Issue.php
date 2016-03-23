@@ -75,8 +75,9 @@ class Issue implements Command {
             throw new AcmeException("Account key not found, did you run 'bin/acme setup'?", 0, $e);
         }
 
-        $acme = new AcmeService(new AcmeClient($server, $keyPair));
+        $this->climate->br();
 
+        $acme = new AcmeService(new AcmeClient($server, $keyPair));
         $promises = [];
 
         foreach ($domains as $i => $domain) {
@@ -103,7 +104,8 @@ class Issue implements Command {
             $keyPair = (yield $keyStore->put($path, $keyPair));
         }
 
-        $this->climate->info("Requesting certificate ...");
+        $this->climate->br();
+        $this->climate->whisper("    Requesting certificate ...");
 
         $location = (yield $acme->requestCertificate($keyPair, $domains));
         $certificates = (yield $acme->pollForCertificate($location));
@@ -112,7 +114,8 @@ class Issue implements Command {
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
-        $this->climate->info("Successfully issued certificate, see {$path}/" . reset($domains));
+        $this->climate->info("    Successfully issued certificate.");
+        $this->climate->info("    See {$path}/" . reset($domains));
 
         yield new CoroutineResult(0);
     }
@@ -134,7 +137,7 @@ class Issue implements Command {
 
         $payload = $acme->generateHttp01Payload($keyPair, $token);
 
-        $this->climate->whisper("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
+        $this->climate->whisper("    Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
 
         $challengeStore = new ChallengeStore($path);
 
@@ -145,7 +148,7 @@ class Issue implements Command {
             yield $acme->answerChallenge($challenge->uri, $payload);
             yield $acme->pollForChallenge($location);
 
-            $this->climate->info("{$domain} is now authorized.");
+            $this->climate->comment("    {$domain} is now authorized.");
 
             yield $challengeStore->delete($token);
         } catch (Exception $e) {
