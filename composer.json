@@ -45,9 +45,9 @@
     "extra": {
         "phar-builder": {
             "compression": "GZip",
-            "name": "acme.phar",
+            "name": "acme-client.phar",
             "output-dir": "build",
-            "include": ["src"],
+            "include": ["src", "vendor/kelunik/acme/res"],
             "entry-point": "bin/acme"
         }
     }
