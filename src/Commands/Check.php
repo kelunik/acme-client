@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
@@ -35,12 +36,13 @@ class Check implements Command {
         $this->climate->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
-            return 0;
+            yield new CoroutineResult(0);
+            return;
         }
 
         $this->climate->comment("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
 
-        return 1;
+        yield new CoroutineResult(1);
     }
 
     public static function getDefinition() {

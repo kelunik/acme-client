@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Exception;
 use Kelunik\Acme\AcmeClient;
@@ -113,7 +114,7 @@ class Issue implements Command {
 
         $this->climate->info("Successfully issued certificate, see {$path}/" . reset($domains));
 
-        return 0;
+        yield new CoroutineResult(0);
     }
 
     private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {

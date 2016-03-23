@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\File\FilesystemException;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeService;
@@ -52,7 +53,7 @@ class Revoke implements Command {
 
         yield (new CertificateStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")). "/certs/" . $keyFile))->delete($args->get("name"));
 
-        return 0;
+        yield new CoroutineResult(0);
     }
 
     public static function getDefinition() {

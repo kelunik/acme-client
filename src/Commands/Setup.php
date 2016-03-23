@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use InvalidArgumentException;
@@ -58,7 +59,7 @@ class Setup implements Command {
         $registration = (yield $acme->register($email));
         $this->climate->whisper("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
 
-        return 0;
+        yield new CoroutineResult(0);
     }
 
     private function checkEmail($email) {
