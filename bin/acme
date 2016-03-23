@@ -95,9 +95,15 @@ try {
     if (count($argv) === 3 && in_array($argv[2], ["h", "-h", "--help", "help"], true)) {
         $climate->usage(["bin/acme {$argv[1]}"]);
         $climate->br();
+
         exit(0);
     } else {
+        $climate->usage(["bin/acme {$argv[1]}"]);
+        $climate->br();
+
         $climate->error($e->getMessage());
+        $climate->br();
+
         exit(1);
     }
 }
