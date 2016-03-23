@@ -44,10 +44,10 @@ class Issue implements Command {
             }
         }
 
-        $domains = array_map("trim", explode(":", str_replace(",", ":", $args->get("domains"))));
+        $domains = array_map("trim", explode(":", str_replace([",", ";"], ":", $args->get("domains"))));
         yield \Amp\resolve($this->checkDnsRecords($domains));
 
-        $docRoots = explode(":", str_replace("\\", "/", $args->get("path")));
+        $docRoots = explode(PATH_SEPARATOR, str_replace("\\", "/", $args->get("path")));
         $docRoots = array_map(function ($root) {
             return rtrim($root, "/");
         }, $docRoots);
@@ -202,13 +202,13 @@ class Issue implements Command {
             "domains" => [
                 "prefix" => "d",
                 "longPrefix" => "domains",
-                "description" => "Colon separated list of domains to request a certificate for.",
+                "description" => "Colon / Semicolon / Comma separated list of domains to request a certificate for.",
                 "required" => true,
             ],
             "path" => [
                 "prefix" => "p",
                 "longPrefix" => "path",
-                "description" => "Colon separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
+                "description" => "Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
                 "required" => true,
             ],
             "user" => [
