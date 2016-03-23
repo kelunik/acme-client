@@ -4,6 +4,7 @@ namespace Kelunik\AcmeClient\Commands;
 
 use Amp\CoroutineResult;
 use Kelunik\AcmeClient\Stores\CertificateStore;
+use Kelunik\AcmeClient\Stores\CertificateStoreException;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
@@ -30,17 +31,26 @@ class Check implements Command {
         $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $server;
         $certificateStore = new CertificateStore($path);
 
-        $pem = (yield $certificateStore->get($args->get("name")));
+        try {
+            $pem = (yield $certificateStore->get($args->get("name")));
+        } catch (CertificateStoreException $e) {
+            $this->climate->br()->error("Certificate not found.")->br();
+
+            yield new CoroutineResult(1);
+            return;
+        }
+
         $cert = new Certificate($pem);
 
-        $this->climate->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
+        $this->climate->br();
+        $this->climate->info("    Certificate is valid until " . date("d.m.Y", $cert->getValidTo()))->br();
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
             yield new CoroutineResult(0);
             return;
         }
 
-        $this->climate->comment("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
+        $this->climate->comment("    Certificate is going to expire within the specified " . $args->get("ttl") . " days.")->br();
 
         yield new CoroutineResult(1);
     }
