@@ -26,7 +26,7 @@ class Check implements Command {
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $server = \Kelunik\AcmeClient\serverToKeyname($server);
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $server;
+        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $server;
         $certificateStore = new CertificateStore($path);
 
         $pem = (yield $certificateStore->get($args->get("name")));
@@ -35,20 +35,22 @@ class Check implements Command {
         $this->climate->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
-            exit(0);
+            return 0;
         }
 
         $this->climate->comment("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
 
-        exit(1);
+        return 1;
     }
 
     public static function getDefinition() {
+        $isPhar = \Kelunik\AcmeClient\isPhar();
+
         return [
             "server" => [
                 "prefix" => "s",
                 "longPrefix" => "server",
-                "description" => "",
+                "description" => "ACME server to use for registration and issuance of certificates.",
                 "required" => true,
             ],
             "name" => [
@@ -62,6 +64,12 @@ class Check implements Command {
                 "defaultValue" => 30,
                 "castTo" => "int",
             ],
+            "storage" => [
+                "longPrefix" => "storage",
+                "description" => "Storage directory for account keys and certificates.",
+                "required" => $isPhar,
+                "defaultValue" => $isPhar ? null : (__DIR__ . "/../../data")
+            ]
         ];
     }
 }

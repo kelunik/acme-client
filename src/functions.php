@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient;
 
+use Phar;
 use Webmozart\Assert\Assert;
 
 function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
@@ -56,4 +57,16 @@ function serverToKeyname($server) {
     $keyFile = preg_replace("@\\.+@", ".", $keyFile);
 
     return $keyFile;
+}
+
+function isPhar() {
+    if (!class_exists("Phar")) {
+        return false;
+    }
+
+    return Phar::running(true) !== "";
+}
+
+function normalizePath($path) {
+    return rtrim(str_replace("\\", "/", $path), "/");
 }

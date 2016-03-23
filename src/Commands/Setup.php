@@ -36,7 +36,7 @@ class Setup implements Command {
         $path = "accounts/{$keyFile}.pem";
         $bits = 4096;
 
-        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
+        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/data");
 
         try {
             $keyPair = (yield $keyStore->get($path));
@@ -78,6 +78,8 @@ class Setup implements Command {
     }
 
     public static function getDefinition() {
+        $isPhar = \Kelunik\AcmeClient\isPhar();
+
         return [
             "server" => [
                 "prefix" => "s",
@@ -87,9 +89,15 @@ class Setup implements Command {
             ],
             "email" => [
                 "longPrefix" => "email",
-                "description" => "Email for important issues, will be sent to the ACME server.",
+                "description" => "E-mail for important issues, will be sent to the ACME server.",
                 "required" => true,
             ],
+            "storage" => [
+                "longPrefix" => "storage",
+                "description" => "Storage directory for account keys and certificates.",
+                "required" => $isPhar,
+                "defaultValue" => $isPhar ? null : (__DIR__ . "/../../data")
+            ]
         ];
     }
 }

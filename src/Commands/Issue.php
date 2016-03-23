@@ -63,7 +63,7 @@ class Issue implements Command {
             );
         }
 
-        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
+        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
 
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
@@ -71,9 +71,7 @@ class Issue implements Command {
         try {
             $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
         } catch (KeyStoreException $e) {
-            $this->climate->error("Account key not found, did you run 'bin/acme setup'?");
-
-            exit(1);
+            throw new AcmeException("Account key not found, did you run 'bin/acme setup'?", 0, $e);
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair));
@@ -109,11 +107,13 @@ class Issue implements Command {
         $location = (yield $acme->requestCertificate($keyPair, $domains));
         $certificates = (yield $acme->pollForCertificate($location));
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile;
+        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile;
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
         $this->climate->info("Successfully issued certificate, see {$path}/" . reset($domains));
+
+        return 0;
     }
 
     private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {
@@ -196,11 +196,13 @@ class Issue implements Command {
     }
 
     public static function getDefinition() {
+        $isPhar = \Kelunik\AcmeClient\isPhar();
+
         return [
             "server" => [
                 "prefix" => "s",
                 "longPrefix" => "server",
-                "description" => "Server to use for issuance, see also 'bin/acme setup'.",
+                "description" => "ACME server to use for registration and issuance of certificates.",
                 "required" => true,
             ],
             "domains" => [
@@ -226,6 +228,12 @@ class Issue implements Command {
                 "defaultValue" => 2048,
                 "castTo" => "int",
             ],
+            "storage" => [
+                "longPrefix" => "storage",
+                "description" => "Storage directory for account keys and certificates.",
+                "required" => $isPhar,
+                "defaultValue" => $isPhar ? null : (__DIR__ . "/../../data")
+            ]
         ];
     }
 }
