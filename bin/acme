@@ -65,18 +65,20 @@ if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
 }
 
 if (count($argv) === 1 || in_array($argv[1], ["h", "-h", "help", "--help"], true)) {
-    print $help;
+    $climate->out($help);
     exit(0);
 }
 
 if (!in_array($argv[1], $commands)) {
-    $climate->error("Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
+    $climate->br()->error("    Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
 
     $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], $commands);
 
     if ($suggestion) {
-        $climate->br()->info("    Did you mean '$suggestion'?")->br();
+        $climate->br()->out("    Did you mean '$suggestion'?");
     }
+
+    $climate->br();
 
     exit(1);
 }
