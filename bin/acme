@@ -125,7 +125,13 @@ Amp\run(function () use ($command, $climate) {
     };
 
     try {
-        yield $command->execute($climate->arguments);
+        $exitCode = (yield $command->execute($climate->arguments));
+
+        if ($exitCode === null) {
+            $logger->warning("Invalid exit code: null, falling back to 0. Please consider reporting this as bug.");
+        }
+
+        exit($exitCode);
     } catch (Throwable $e) {
         $handler($e);
     } catch (Exception $e) {

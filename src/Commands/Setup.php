@@ -57,6 +57,8 @@ class Setup implements Command {
         /** @var Registration $registration */
         $registration = (yield $acme->register($email));
         $this->climate->whisper("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
+
+        return 0;
     }
 
     private function checkEmail($email) {
