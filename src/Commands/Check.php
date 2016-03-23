@@ -34,7 +34,7 @@ class Check implements Command {
         try {
             $pem = (yield $certificateStore->get($args->get("name")));
         } catch (CertificateStoreException $e) {
-            $this->climate->br()->error("Certificate not found.")->br();
+            $this->climate->br()->error("    Certificate not found.")->br();
 
             yield new CoroutineResult(1);
             return;
@@ -43,7 +43,7 @@ class Check implements Command {
         $cert = new Certificate($pem);
 
         $this->climate->br();
-        $this->climate->info("    Certificate is valid until " . date("d.m.Y", $cert->getValidTo()))->br();
+        $this->climate->whisper("    Certificate is valid until " . date("d.m.Y", $cert->getValidTo()))->br();
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
             yield new CoroutineResult(0);

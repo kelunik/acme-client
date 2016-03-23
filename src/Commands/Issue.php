@@ -116,6 +116,7 @@ class Issue implements Command {
 
         $this->climate->info("    Successfully issued certificate.");
         $this->climate->info("    See {$path}/" . reset($domains));
+        $this->climate->br();
 
         yield new CoroutineResult(0);
     }
