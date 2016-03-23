@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\File\FilesystemException;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeService;
@@ -23,7 +24,7 @@ class Revoke implements Command {
     }
 
     private function doExecute(Manager $args) {
-        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
+        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
 
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
@@ -33,7 +34,7 @@ class Revoke implements Command {
 
         $this->climate->info("Revoking certificate ...");
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile . "/" . $args->get("name") . "/cert.pem";
+        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile . "/" . $args->get("name") . "/cert.pem";
 
         try {
             $pem = (yield \Amp\File\get($path));
@@ -50,17 +51,15 @@ class Revoke implements Command {
         yield $acme->revokeCertificate($pem);
         $this->climate->info("Certificate has been revoked.");
 
-        yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile))->delete($args->get("name"));
+        yield (new CertificateStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")). "/certs/" . $keyFile))->delete($args->get("name"));
+
+        yield new CoroutineResult(0);
     }
 
     public static function getDefinition() {
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "name" => [
                 "longPrefix" => "name",
                 "description" => "Common name of the certificate to be revoked.",

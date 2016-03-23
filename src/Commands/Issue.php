@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Exception;
 use Kelunik\Acme\AcmeClient;
@@ -44,10 +45,10 @@ class Issue implements Command {
             }
         }
 
-        $domains = array_map("trim", explode(":", str_replace(",", ":", $args->get("domains"))));
+        $domains = array_map("trim", explode(":", str_replace([",", ";"], ":", $args->get("domains"))));
         yield \Amp\resolve($this->checkDnsRecords($domains));
 
-        $docRoots = explode(":", str_replace("\\", "/", $args->get("path")));
+        $docRoots = explode(PATH_SEPARATOR, str_replace("\\", "/", $args->get("path")));
         $docRoots = array_map(function ($root) {
             return rtrim($root, "/");
         }, $docRoots);
@@ -63,7 +64,7 @@ class Issue implements Command {
             );
         }
 
-        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
+        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
 
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
@@ -71,9 +72,7 @@ class Issue implements Command {
         try {
             $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
         } catch (KeyStoreException $e) {
-            $this->climate->error("Account key not found, did you run 'bin/acme setup'?");
-
-            exit(1);
+            throw new AcmeException("Account key not found, did you run 'bin/acme setup'?", 0, $e);
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair));
@@ -109,11 +108,13 @@ class Issue implements Command {
         $location = (yield $acme->requestCertificate($keyPair, $domains));
         $certificates = (yield $acme->pollForCertificate($location));
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile;
+        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile;
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
         $this->climate->info("Successfully issued certificate, see {$path}/" . reset($domains));
+
+        yield new CoroutineResult(0);
     }
 
     private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {
@@ -197,22 +198,18 @@ class Issue implements Command {
 
     public static function getDefinition() {
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "Server to use for issuance, see also 'bin/acme setup'.",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "domains" => [
                 "prefix" => "d",
                 "longPrefix" => "domains",
-                "description" => "Colon separated list of domains to request a certificate for.",
+                "description" => "Colon / Semicolon / Comma separated list of domains to request a certificate for.",
                 "required" => true,
             ],
             "path" => [
                 "prefix" => "p",
                 "longPrefix" => "path",
-                "description" => "Colon separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
+                "description" => "Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
                 "required" => true,
             ],
             "user" => [

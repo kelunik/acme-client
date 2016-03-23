@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
@@ -26,7 +27,7 @@ class Check implements Command {
         $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
         $server = \Kelunik\AcmeClient\serverToKeyname($server);
 
-        $path = dirname(dirname(__DIR__)) . "/data/certs/" . $server;
+        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $server;
         $certificateStore = new CertificateStore($path);
 
         $pem = (yield $certificateStore->get($args->get("name")));
@@ -35,22 +36,19 @@ class Check implements Command {
         $this->climate->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
-            exit(0);
+            yield new CoroutineResult(0);
+            return;
         }
 
         $this->climate->comment("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
 
-        exit(1);
+        yield new CoroutineResult(1);
     }
 
     public static function getDefinition() {
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "name" => [
                 "longPrefix" => "name",
                 "description" => "Common name of the certificate to check.",

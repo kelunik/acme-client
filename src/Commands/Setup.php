@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use InvalidArgumentException;
@@ -36,7 +37,7 @@ class Setup implements Command {
         $path = "accounts/{$keyFile}.pem";
         $bits = 4096;
 
-        $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
+        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
 
         try {
             $keyPair = (yield $keyStore->get($path));
@@ -57,6 +58,8 @@ class Setup implements Command {
         /** @var Registration $registration */
         $registration = (yield $acme->register($email));
         $this->climate->whisper("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
+
+        yield new CoroutineResult(0);
     }
 
     private function checkEmail($email) {
@@ -78,16 +81,14 @@ class Setup implements Command {
     }
 
     public static function getDefinition() {
+
+
         return [
-            "server" => [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for registration and issuance of certificates.",
-                "required" => true,
-            ],
+            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
+            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "email" => [
                 "longPrefix" => "email",
-                "description" => "Email for important issues, will be sent to the ACME server.",
+                "description" => "E-mail for important issues, will be sent to the ACME server.",
                 "required" => true,
             ],
         ];

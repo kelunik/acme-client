@@ -15,4 +15,15 @@ class FunctionsTest extends \PHPUnit_Framework_TestCase {
         $this->assertSame("acme", suggestCommand("acme!", ["acme"]));
         $this->assertSame("", suggestCommand("issue", ["acme"]));
     }
+
+    public function testIsPhar() {
+        $this->assertFalse(isPhar());
+    }
+
+    public function testNormalizePath() {
+        $this->assertSame("/etc/foobar", normalizePath("/etc/foobar"));
+        $this->assertSame("/etc/foobar", normalizePath("/etc/foobar/"));
+        $this->assertSame("/etc/foobar", normalizePath("/etc/foobar/"));
+        $this->assertSame("C:/etc/foobar", normalizePath("C:\\etc\\foobar\\"));
+    }
 }
