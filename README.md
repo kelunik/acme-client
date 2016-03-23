@@ -99,7 +99,7 @@ bin/acme issue -s letsencrypt -d example.com:www.example.com -p /var/www/example
 To revoke a certificate, you need a valid account key currently, just like for issuance.
 
 ```
-bin/acme revoke --name example.com
+bin/acme revoke --name example.com -s letsencrypt
 ```
 
 For renewal, there's the `bin/acme check` subcommand.
