@@ -2,12 +2,7 @@
 <?php
 
 use Auryn\Injector;
-use Bramus\Monolog\Formatter\ColoredLineFormatter;
-use Kelunik\AcmeClient\LoggerColorScheme;
 use League\CLImate\CLImate;
-use Monolog\Handler\StreamHandler;
-use Monolog\Logger;
-use Psr\Log\LoggerInterface;
 
 if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
     echo <<<HELP
@@ -35,7 +30,7 @@ $commands = [
     "revoke",
 ];
 
-$help = implode("\n    ", array_map(function($command) {
+$help = implode("\n    ", array_map(function ($command) {
     return "bin/acme {$command}";
 }, $commands));
 
@@ -110,19 +105,12 @@ try {
     }
 }
 
-$handler = new StreamHandler("php://stdout", Logger::DEBUG);
-$handler->setFormatter(new ColoredLineFormatter(new LoggerColorScheme, null, null, true, true));
-
-$logger = new Logger("ACME");
-$logger->pushHandler($handler);
-
-$injector->alias(LoggerInterface::class, Logger::class);
-$injector->share($logger);
+$injector->share($climate);
 
 $command = $injector->make($class);
 
-Amp\run(function () use ($command, $climate, $logger) {
-    $handler = function($e) use ($logger) {
+Amp\run(function () use ($command, $climate) {
+    $handler = function ($e) use ($climate) {
         $error = (string) $e;
         $lines = explode("\n", $error);
         $lines = array_filter($lines, function ($line) {
@@ -130,7 +118,7 @@ Amp\run(function () use ($command, $climate, $logger) {
         });
 
         foreach ($lines as $line) {
-            $logger->error($line);
+            $climate->error($line)->br();
         }
 
         exit(1);

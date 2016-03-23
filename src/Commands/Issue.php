@@ -2,7 +2,6 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
-use Amp\CombinatorException;
 use Amp\Dns\Record;
 use Exception;
 use Kelunik\Acme\AcmeClient;
@@ -15,15 +14,15 @@ use Kelunik\AcmeClient\Stores\ChallengeStore;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
-use Psr\Log\LoggerInterface;
+use League\CLImate\CLImate;
 use stdClass;
 use Throwable;
 
 class Issue implements Command {
-    private $logger;
+    private $climate;
 
-    public function __construct(LoggerInterface $logger) {
-        $this->logger = $logger;
+    public function __construct(CLImate $climate) {
+        $this->climate = $climate;
     }
 
     public function execute(Manager $args) {
@@ -49,7 +48,7 @@ class Issue implements Command {
         yield \Amp\resolve($this->checkDnsRecords($domains));
 
         $docRoots = explode(":", str_replace("\\", "/", $args->get("path")));
-        $docRoots = array_map(function($root) {
+        $docRoots = array_map(function ($root) {
             return rtrim($root, "/");
         }, $docRoots);
 
@@ -72,7 +71,7 @@ class Issue implements Command {
         try {
             $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
         } catch (KeyStoreException $e) {
-            $this->logger->error("Account key not found, did you run 'bin/acme setup'?");
+            $this->climate->error("Account key not found, did you run 'bin/acme setup'?");
 
             exit(1);
         }
@@ -89,7 +88,7 @@ class Issue implements Command {
 
         if (!empty($errors)) {
             foreach ($errors as $error) {
-                $this->logger->error($error->getMessage());
+                $this->climate->error($error->getMessage());
             }
 
             throw new AcmeException("Issuance failed, not all challenges could be solved.");
@@ -105,7 +104,7 @@ class Issue implements Command {
             $keyPair = (yield $keyStore->put($path, $keyPair));
         }
 
-        $this->logger->info("Requesting certificate ...");
+        $this->climate->info("Requesting certificate ...");
 
         $location = (yield $acme->requestCertificate($keyPair, $domains));
         $certificates = (yield $acme->pollForCertificate($location));
@@ -114,7 +113,7 @@ class Issue implements Command {
         $certificateStore = new CertificateStore($path);
         yield $certificateStore->put($certificates);
 
-        $this->logger->info("Successfully issued certificate, see {$path}/" . reset($domains));
+        $this->climate->info("Successfully issued certificate, see {$path}/" . reset($domains));
     }
 
     private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {
@@ -132,11 +131,9 @@ class Issue implements Command {
             throw new AcmeException("Protocol violation: Invalid Token!");
         }
 
-        $this->logger->debug("Generating payload...");
         $payload = $acme->generateHttp01Payload($keyPair, $token);
 
-        $this->logger->info("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
-
+        $this->climate->whisper("Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
 
         $challengeStore = new ChallengeStore($path);
 
@@ -144,13 +141,10 @@ class Issue implements Command {
             $challengeStore->put($token, $payload, isset($user) ? $user : null);
 
             yield $acme->verifyHttp01Challenge($domain, $token, $payload);
-            $this->logger->info("Successfully self-verified challenge.");
-
             yield $acme->answerChallenge($challenge->uri, $payload);
-            $this->logger->info("Answered challenge... waiting");
-
             yield $acme->pollForChallenge($location);
-            $this->logger->info("Challenge successful. {$domain} is now authorized.");
+
+            $this->climate->info("{$domain} is now authorized.");
 
             yield $challengeStore->delete($token);
         } catch (Exception $e) {
@@ -179,8 +173,6 @@ class Issue implements Command {
         if (!empty($errors)) {
             throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(array_keys($errors)));
         }
-
-        $this->logger->info("Checked DNS records, all fine.");
     }
 
     private function findSuitableCombination(stdClass $response) {

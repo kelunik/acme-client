@@ -5,13 +5,13 @@ namespace Kelunik\AcmeClient\Commands;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
-use Psr\Log\LoggerInterface;
+use League\CLImate\CLImate;
 
 class Check implements Command {
-    private $logger;
+    private $climate;
 
-    public function __construct(LoggerInterface $logger) {
-        $this->logger = $logger;
+    public function __construct(CLImate $climate) {
+        $this->climate = $climate;
     }
 
     public function execute(Manager $args) {
@@ -32,13 +32,13 @@ class Check implements Command {
         $pem = (yield $certificateStore->get($args->get("name")));
         $cert = new Certificate($pem);
 
-        $this->logger->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
+        $this->climate->info("Certificate is valid until " . date("d.m.Y", $cert->getValidTo()));
 
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
             exit(0);
         }
 
-        $this->logger->warning("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
+        $this->climate->comment("Certificate is going to expire within the specified " . $args->get("ttl") . " days.");
 
         exit(1);
     }

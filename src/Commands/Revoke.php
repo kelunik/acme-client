@@ -3,22 +3,19 @@
 namespace Kelunik\AcmeClient\Commands;
 
 use Amp\File\FilesystemException;
-use Amp\Promise;
-use Generator;
 use Kelunik\Acme\AcmeClient;
-use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
-use Psr\Log\LoggerInterface;
+use League\CLImate\CLImate;
 
 class Revoke implements Command {
-    private $logger;
+    private $climate;
 
-    public function __construct(LoggerInterface $logger) {
-        $this->logger = $logger;
+    public function __construct(CLImate $climate) {
+        $this->climate = $climate;
     }
 
     public function execute(Manager $args) {
@@ -34,7 +31,7 @@ class Revoke implements Command {
         $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
-        $this->logger->info("Revoking certificate ...");
+        $this->climate->info("Revoking certificate ...");
 
         $path = dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile . "/" . $args->get("name") . "/cert.pem";
 
@@ -46,12 +43,12 @@ class Revoke implements Command {
         }
 
         if ($cert->getValidTo() < time()) {
-            $this->logger->warning("Certificate did already expire, no need to revoke it.");
+            $this->climate->info("Certificate did already expire, no need to revoke it.");
         }
 
-        $this->logger->info("Certificate was valid for: " . implode(", ", $cert->getNames()));
+        $this->climate->info("Certificate was valid for: " . implode(", ", $cert->getNames()));
         yield $acme->revokeCertificate($pem);
-        $this->logger->info("Certificate has been revoked.");
+        $this->climate->info("Certificate has been revoked.");
 
         yield (new CertificateStore(dirname(dirname(__DIR__)) . "/data/certs/" . $keyFile))->delete($args->get("name"));
     }

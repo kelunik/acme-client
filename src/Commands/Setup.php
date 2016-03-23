@@ -4,8 +4,6 @@ namespace Kelunik\AcmeClient\Commands;
 
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
-use Amp\Promise;
-use Generator;
 use InvalidArgumentException;
 use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
@@ -15,14 +13,13 @@ use Kelunik\Acme\Registration;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
-use Psr\Log\LoggerInterface;
-use RuntimeException;
+use League\CLImate\CLImate;
 
 class Setup implements Command {
-    private $logger;
+    private $climate;
 
-    public function __construct(LoggerInterface $logger) {
-        $this->logger = $logger;
+    public function __construct(CLImate $climate) {
+        $this->climate = $climate;
     }
 
     public function execute(Manager $args) {
@@ -42,26 +39,24 @@ class Setup implements Command {
         $keyStore = new KeyStore(dirname(dirname(__DIR__)) . "/data");
 
         try {
-            $this->logger->info("Loading private key ...");
             $keyPair = (yield $keyStore->get($path));
-            $this->logger->info("Existing private key successfully loaded.");
+            $this->climate->info("Existing private key successfully loaded.");
         } catch (KeyStoreException $e) {
-            $this->logger->info("No existing private key found, generating new one ...");
-            $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
-            $this->logger->info("Generated new private key with {$bits} bits.");
+            $this->climate->info("No private key found, generating new one ...");
 
-            $this->logger->info("Saving new private key ...");
+            $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
             $keyPair = (yield $keyStore->put($path, $keyPair));
-            $this->logger->info("New private key successfully saved.");
+
+            $this->climate->info("Generated new private key with {$bits} bits.");
         }
 
         $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
 
-        $this->logger->info("Registering with ACME server " . substr($server, 8) . " ...");
+        $this->climate->info("Registering with ACME server " . substr($server, 8) . " ...");
 
         /** @var Registration $registration */
         $registration = (yield $acme->register($email));
-        $this->logger->notice("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
+        $this->climate->whisper("Registration successful with the following contact information: " . implode(", ", $registration->getContact()));
     }
 
     private function checkEmail($email) {
