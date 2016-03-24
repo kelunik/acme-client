@@ -13,6 +13,7 @@ cache:
 install:
   - phpenv config-rm xdebug.ini
   - composer self-update
+  - composer config --global discard-changes true
   - if [[ ${TRAVIS_PHP_VERSION:0:3} == "5.5" ]]; then composer require --dev --no-update phpunit/phpunit ^4; fi
   - composer require satooshi/php-coveralls dev-master --dev --no-update
   - composer update --ignore-platform-reqs
