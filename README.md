@@ -34,6 +34,15 @@ If you want to update, just replace the old phar with a new one.
 All commands require an additional `--storage` argument when using the phar. That's the path where your keys and certificates will be stored.
 On Unix you could use something like `--storage /etc/acme`.
 
+If you're using the phar, you can add a file called `acme-client.yml` next to it with the two keys `storage` and `server`.
+These values will be used as default if you don't specify them, but you can still use another server by explicitly adding it as argument.
+
+```yml
+# Sample YAML configuration:
+storage: /etc/acme
+server: letsencrypt
+```
+
 **Instructions using Composer**
 
 ```bash
