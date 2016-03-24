@@ -15,7 +15,26 @@ It's an alternative for the [official client](https://github.com/letsencrypt/let
 * PHP 5.5+
 * Composer
 
-**Instructions**
+**Instructions using the Phar**
+
+```bash
+# Go to https://github.com/kelunik/acme-client/releases/latest
+# Download the latest release archive
+
+# Run it.
+chmod +x acme-client.phar
+./acme-client.phar
+
+# Or install it globally
+mv ./acme-client.phar /usr/local/bin/acme-client
+```
+
+If you want to update, just replace the old phar with a new one.
+
+All commands require an additional `--storage` argument when using the phar. That's the path where your keys and certificates will be stored.
+On Unix you could use something like `--storage /etc/acme`.
+
+**Instructions using Composer**
 
 ```bash
 # Clone repository
