@@ -2,7 +2,10 @@
 
 namespace Kelunik\AcmeClient;
 
+use Kelunik\Acme\AcmeException;
 use Phar;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml;
 use Webmozart\Assert\Assert;
 
 function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
@@ -74,14 +77,51 @@ function normalizePath($path) {
 function getArgumentDescription($argument) {
     $isPhar = \Kelunik\AcmeClient\isPhar();
 
+    $config = [];
+
+    if ($isPhar) {
+        $configPath = substr(dirname(Phar::running(true)), strlen("phar://")) . "/acme-client.yml";
+
+        if (file_exists($configPath)) {
+            $configContent = file_get_contents($configPath);
+
+            try {
+                $value = Yaml::parse($configContent);
+
+                if (isset($value["server"]) && is_string($value["server"])) {
+                    $config["server"] = $value["server"];
+                    unset($value["server"]);
+                }
+
+                if (isset($value["storage"]) && is_string($value["storage"])) {
+                    $config["storage"] = $value["storage"];
+                    unset($value["storage"]);
+                }
+
+                if (!empty($value)) {
+                    throw new AcmeException("Provided YAML file had unknown options: " . implode(", ", array_keys($value)));
+                }
+            } catch (ParseException $e) {
+                throw new AcmeException("Unable to parse the YAML file ({$configPath}): " . $e->getMessage());
+            }
+        }
+    }
+
     switch ($argument) {
         case "server":
-            return [
+            $argument = [
                 "prefix" => "s",
                 "longPrefix" => "server",
                 "description" => "ACME server to use for registration and issuance of certificates.",
                 "required" => true,
             ];
+
+            if (isset($config["server"])) {
+                $argument["required"] = false;
+                $argument["defaultValue"] = $config["server"];
+            }
+
+            return $argument;
 
         case "storage":
             $argument = [
@@ -92,6 +132,9 @@ function getArgumentDescription($argument) {
 
             if (!$isPhar) {
                 $argument["defaultValue"] = dirname(__DIR__) . "/data";
+            } else if (isset($config["storage"])) {
+                $argument["required"] = false;
+                $argument["defaultValue"] = $config["storage"];
             }
 
             return $argument;
