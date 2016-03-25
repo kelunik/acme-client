@@ -2,12 +2,21 @@
 
 namespace Kelunik\AcmeClient;
 
+use InvalidArgumentException;
 use Kelunik\Acme\AcmeException;
 use Phar;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 use Webmozart\Assert\Assert;
 
+/**
+ * Suggests a command based on similarity in a list of available commands.
+ *
+ * @param string $badCommand invalid command
+ * @param array  $commands list of available commands
+ * @param int    $suggestThreshold similarity threshold
+ * @return string suggestion or empty string if no command is similar enough
+ */
 function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
     Assert::string($badCommand, "Bad command must be a string. Got: %s");
     Assert::integer($suggestThreshold, "Suggest threshold must be an integer. Got: %s");
@@ -30,6 +39,13 @@ function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
     return $bestMatchPercentage >= $suggestThreshold ? $bestMatch : "";
 }
 
+/**
+ * Resolves a server to a valid URI. If a valid shortcut is passed, it's resolved to the defined URI. If a URI without
+ * protocol is passed, it will default to HTTPS.
+ *
+ * @param string $uri URI to resolve
+ * @return string resolved URI
+ */
 function resolveServer($uri) {
     Assert::string($uri, "URI must be a string. Got: %s");
 
@@ -43,6 +59,10 @@ function resolveServer($uri) {
         return $shortcuts[$uri];
     }
 
+    if (strpos($uri, "/") === false) {
+        throw new InvalidArgumentException("Invalid server URI: " . $uri);
+    }
+
     $protocol = substr($uri, 0, strpos($uri, "://"));
 
     if (!$protocol || $protocol === $uri) {
@@ -52,6 +72,12 @@ function resolveServer($uri) {
     }
 }
 
+/**
+ * Transforms a directory URI to a valid filename for usage as key file name.
+ *
+ * @param string $server URI to the directory
+ * @return string identifier usable as file name
+ */
 function serverToKeyname($server) {
     $server = substr($server, strpos($server, "://") + 3);
 
@@ -62,6 +88,11 @@ function serverToKeyname($server) {
     return $keyFile;
 }
 
+/**
+ * Checks whether the application is currently running as Phar.
+ *
+ * @return bool {@code true} if running as Phar, {@code false} otherwise
+ */
 function isPhar() {
     if (!class_exists("Phar")) {
         return false;
@@ -70,10 +101,23 @@ function isPhar() {
     return Phar::running(true) !== "";
 }
 
+/**
+ * Normalizes a path. Replaces all backslashes with slashes and removes trailing slashes.
+ *
+ * @param string $path path to normalize
+ * @return string normalized path
+ */
 function normalizePath($path) {
     return rtrim(str_replace("\\", "/", $path), "/");
 }
 
+/**
+ * Returns a consistent argument description for CLIMate. Valid arguments are "server" and "storage".
+ *
+ * @param string $argument argument name
+ * @return array CLIMate argument description
+ * @throws AcmeException if the provided acme-client.yml file is invalid
+ */
 function getArgumentDescription($argument) {
     $isPhar = \Kelunik\AcmeClient\isPhar();
 
@@ -140,10 +184,15 @@ function getArgumentDescription($argument) {
             return $argument;
 
         default:
-            throw new \InvalidArgumentException("Unknown argument: " . $argument);
+            throw new InvalidArgumentException("Unknown argument: " . $argument);
     }
 }
 
+/**
+ * Returns the binary that currently runs. Can be included in help texts about other commands.
+ *
+ * @return string binary callable, shortened based on PATH and CWD
+ */
 function getBinary() {
     $binary = "bin/acme";
 
