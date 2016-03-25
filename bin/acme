@@ -2,6 +2,7 @@
 <?php
 
 use Auryn\Injector;
+use Kelunik\AcmeClient\AcmeFactory;
 use League\CLImate\CLImate;
 
 if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
@@ -69,7 +70,6 @@ $help = <<<EOT
 EOT;
 
 $climate = new CLImate;
-$injector = new Injector;
 
 if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
     $climate->error("Please run this script via CLI!");
@@ -122,7 +122,9 @@ try {
     }
 }
 
+$injector = new Injector;
 $injector->share($climate);
+$injector->share(new AcmeFactory);
 
 $command = $injector->make($class);
 

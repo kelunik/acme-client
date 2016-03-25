@@ -6,11 +6,10 @@ use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use InvalidArgumentException;
-use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
-use Kelunik\Acme\AcmeService;
 use Kelunik\Acme\OpenSSLKeyGenerator;
 use Kelunik\Acme\Registration;
+use Kelunik\AcmeClient\AcmeFactory;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
@@ -18,9 +17,11 @@ use League\CLImate\CLImate;
 
 class Setup implements Command {
     private $climate;
+    private $acmeFactory;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate, AcmeFactory $acmeFactory) {
         $this->climate = $climate;
+        $this->acmeFactory = $acmeFactory;
     }
 
     public function execute(Manager $args) {
@@ -53,7 +54,7 @@ class Setup implements Command {
             $this->climate->whisper("    Generated new private key with {$bits} bits.");
         }
 
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = $this->acmeFactory->build($server, $keyPair);
 
         $this->climate->whisper("    Registering with " . substr($server, 8) . " ...");
 

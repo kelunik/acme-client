@@ -4,8 +4,7 @@ namespace Kelunik\AcmeClient\Commands;
 
 use Amp\CoroutineResult;
 use Amp\File\FilesystemException;
-use Kelunik\Acme\AcmeClient;
-use Kelunik\Acme\AcmeService;
+use Kelunik\AcmeClient\AcmeFactory;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\Certificate\Certificate;
@@ -14,9 +13,11 @@ use League\CLImate\CLImate;
 
 class Revoke implements Command {
     private $climate;
+    private $acmeFactory;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate, AcmeFactory $acmeFactory) {
         $this->climate = $climate;
+        $this->acmeFactory = $acmeFactory;
     }
 
     public function execute(Manager $args) {
@@ -30,7 +31,7 @@ class Revoke implements Command {
         $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
         $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
-        $acme = new AcmeService(new AcmeClient($server, $keyPair), $keyPair);
+        $acme = $this->acmeFactory->build($server, $keyPair);
 
         $this->climate->br();
         $this->climate->whisper("    Revoking certificate ...");
@@ -57,7 +58,7 @@ class Revoke implements Command {
         $this->climate->br();
         $this->climate->info("    Certificate has been revoked.");
 
-        yield (new CertificateStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")). "/certs/" . $keyFile))->delete($args->get("name"));
+        yield (new CertificateStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile))->delete($args->get("name"));
 
         yield new CoroutineResult(0);
     }

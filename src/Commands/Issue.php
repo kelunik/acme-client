@@ -5,11 +5,11 @@ namespace Kelunik\AcmeClient\Commands;
 use Amp\CoroutineResult;
 use Amp\Dns\Record;
 use Exception;
-use Kelunik\Acme\AcmeClient;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
 use Kelunik\Acme\KeyPair;
 use Kelunik\Acme\OpenSSLKeyGenerator;
+use Kelunik\AcmeClient\AcmeFactory;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\ChallengeStore;
 use Kelunik\AcmeClient\Stores\KeyStore;
@@ -21,9 +21,11 @@ use Throwable;
 
 class Issue implements Command {
     private $climate;
+    private $acmeFactory;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate, AcmeFactory $acmeFactory) {
         $this->climate = $climate;
+        $this->acmeFactory = $acmeFactory;
     }
 
     public function execute(Manager $args) {
@@ -77,7 +79,7 @@ class Issue implements Command {
 
         $this->climate->br();
 
-        $acme = new AcmeService(new AcmeClient($server, $keyPair));
+        $acme = $this->acmeFactory->build($server, $keyPair);
         $promises = [];
 
         foreach ($domains as $i => $domain) {
