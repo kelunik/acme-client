@@ -143,3 +143,30 @@ function getArgumentDescription($argument) {
             throw new \InvalidArgumentException("Unknown argument: " . $argument);
     }
 }
+
+function getBinary() {
+    $binary = "bin/acme";
+
+    if (isPhar()) {
+        $binary = substr(Phar::running(true), strlen("phar://"));
+
+        $path = getenv("PATH");
+        $locations = explode(PATH_SEPARATOR, $path);
+
+        $binaryPath = dirname($binary);
+
+        foreach ($locations as $location) {
+            if ($location === $binaryPath) {
+                return substr($binary, strlen($binaryPath) + 1);
+            }
+        }
+
+        $cwd = getcwd();
+
+        if ($cwd && strpos($binary, $cwd) === 0) {
+            $binary = "." . substr($binary, strlen($cwd));
+        }
+    }
+
+    return $binary;
+}
