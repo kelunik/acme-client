@@ -2,6 +2,11 @@
 
 `kelunik/acme-client` is an ACME client written in PHP. ACME is the protocol that powers the [Let's Encrypt](https://letsencrypt.org) certificate authority.
 
+## Requirements
+
+ * PHP 5.5+ with OpenSSL
+ * Works on Unix and Windows
+
 ## Documentation
 
  * [Installation](./doc/installation.md)
