@@ -48,7 +48,7 @@
             "compression": "GZip",
             "name": "acme-client.phar",
             "output-dir": "build",
-            "include": ["src", "vendor/kelunik/acme/res"],
+            "include": ["src", "vendor/kelunik/acme/res", "vendor/amphp/socket/var"],
             "entry-point": "bin/acme"
         }
     }
