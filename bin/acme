@@ -21,6 +21,21 @@ HELP;
     exit(-1);
 }
 
+if (!function_exists("openssl_pkey_get_private")) {
+    echo <<<HELP
+
+      ____ __________ ___  ___
+     / __ `/ ___/ __ `__ \/ _ \
+    / /_/ / /__/ / / / / /  __/
+    \__,_/\___/_/ /_/ /_/\___/
+
+    You need to enable OpenSSL in your php.ini
+
+
+HELP;
+    exit(-2);
+}
+
 require __DIR__ . "/../vendor/autoload.php";
 
 $commands = [
