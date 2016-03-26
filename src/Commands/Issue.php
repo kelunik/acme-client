@@ -178,7 +178,7 @@ class Issue implements Command {
         list($errors) = (yield \Amp\any($promises));
 
         if (!empty($errors)) {
-            throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(array_keys($errors)));
+            throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(", ", array_keys($errors)));
         }
     }
 
