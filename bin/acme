@@ -105,22 +105,23 @@ try {
     unset($args[1]);
 
     $climate->arguments->add($definition);
-    $climate->arguments->parse(array_values($args));
-} catch (Exception $e) {
+
     if (count($argv) === 3 && in_array($argv[2], ["h", "-h", "--help", "help"], true)) {
         $climate->usage(["{$binary} {$argv[1]}"]);
         $climate->br();
 
         exit(0);
     } else {
-        $climate->usage(["{$binary} {$argv[1]}"]);
-        $climate->br();
-
-        $climate->error($e->getMessage());
-        $climate->br();
-
-        exit(1);
+        $climate->arguments->parse(array_values($args));
     }
+} catch (Exception $e) {
+    $climate->usage(["{$binary} {$argv[1]}"]);
+    $climate->br();
+
+    $climate->error($e->getMessage());
+    $climate->br();
+
+    exit(1);
 }
 
 $injector = new Injector;
