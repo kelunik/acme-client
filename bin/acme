@@ -45,6 +45,7 @@ $commands = [
     "check" => "Check if a certificate is still valid long enough.",
     "revoke" => "Revoke a certificate.",
     "version" => "Print version information.",
+    "help" => "Print this help information.",
 ];
 
 $binary = \Kelunik\AcmeClient\getBinary();
@@ -62,7 +63,7 @@ $help = <<<EOT
 
 <yellow>Options:</yellow>
   <green>-h, --help</green>
-  └─ Print this help message.
+  └─ Print this help information.
 
 <yellow>Available commands:</yellow>
 {$help}
@@ -77,7 +78,7 @@ if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
     exit(1);
 }
 
-if (count($argv) === 1 || in_array($argv[1], ["h", "-h", "help", "--help"], true)) {
+if (count($argv) === 1 || in_array($argv[1], ["-h", "help", "--help"], true)) {
     $climate->out($logo . $help);
     exit(0);
 }
@@ -106,7 +107,7 @@ try {
 
     $climate->arguments->add($definition);
 
-    if (count($argv) === 3 && in_array($argv[2], ["h", "-h", "--help", "help"], true)) {
+    if (count($argv) === 3 && in_array($argv[2], ["-h", "--help"], true)) {
         $climate->usage(["{$binary} {$argv[1]}"]);
         $climate->br();
 
