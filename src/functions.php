@@ -219,3 +219,25 @@ function getBinary() {
 
     return $binary;
 }
+
+/**
+ * Cuts a text to a certain length and appends an ellipsis if necessary.
+ *
+ * @param string $text text to shorten
+ * @param int    $max maximum length
+ * @param string $append appendix when too long
+ * @return string shortened string
+ */
+function ellipsis($text, $max = 70, $append = "…") {
+    if (strlen($text) <= $max) {
+        return $text;
+    }
+
+    $out = substr($text, 0, $max);
+
+    if (strpos($text, " ") === false) {
+        return $out . $append;
+    }
+
+    return preg_replace("/\\w+$/", "", $out) . $append;
+}

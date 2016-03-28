@@ -1,6 +1,6 @@
 {
     "name": "kelunik/acme-client",
-    "description": "Standalone PHP ACME client.",
+    "description": "Let's Encrypt / ACME client written in PHP for the CLI.",
     "keywords": [
         "ACME",
         "letsencrypt",
@@ -24,7 +24,8 @@
     "require-dev": {
         "phpunit/phpunit": "^5",
         "fabpot/php-cs-fixer": "^1.9",
-        "macfja/phar-builder": "dev-master#a2db582eab26ef7b15144c013408749a79fae361"
+        "macfja/phar-builder": "dev-master#97bfa5ffb2bb8beb26db2d5575e852dd10593ac3",
+        "league/event": "^2.1"
     },
     "license": "MIT",
     "authors": [
@@ -48,8 +49,19 @@
             "compression": "GZip",
             "name": "acme-client.phar",
             "output-dir": "build",
-            "include": ["src", "vendor/kelunik/acme/res", "vendor/amphp/socket/var"],
-            "entry-point": "bin/acme"
+            "include": ["info", "src", "vendor/kelunik/acme/res", "vendor/amphp/socket/var"],
+            "entry-point": "bin/acme",
+            "events": {
+                "build.before": [
+                    "mkdir -p info",
+                    "git describe --tags > info/build.version",
+                    "php -r 'echo time();' > info/build.time"
+                ],
+                "build.after": [
+                    "rm -rf info",
+                    "chmod +x build/acme-client.phar"
+                ]
+            }
         }
     }
 }

@@ -5,15 +5,19 @@ use Auryn\Injector;
 use Kelunik\AcmeClient\AcmeFactory;
 use League\CLImate\CLImate;
 
+$logo = <<<LOGO
+    ____ __________ ___  ___
+   / __ `/ ___/ __ `__ \/ _ \
+  / /_/ / /__/ / / / / /  __/
+  \__,_/\___/_/ /_/ /_/\___/
+
+LOGO;
+
 if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
+    echo $logo;
     echo <<<HELP
 
-      ____ __________ ___  ___
-     / __ `/ ___/ __ `__ \/ _ \
-    / /_/ / /__/ / / / / /  __/
-    \__,_/\___/_/ /_/ /_/\___/
-
-    You need to install the composer dependencies.
+  You need to install the composer dependencies.
 
     composer install --no-dev
 
@@ -23,14 +27,10 @@ HELP;
 }
 
 if (!function_exists("openssl_pkey_get_private")) {
+    echo $logo;
     echo <<<HELP
 
-      ____ __________ ___  ___
-     / __ `/ ___/ __ `__ \/ _ \
-    / /_/ / /__/ / / / / /  __/
-    \__,_/\___/_/ /_/ /_/\___/
-
-    You need to enable OpenSSL in your php.ini
+  You need to enable OpenSSL in your php.ini
 
 
 HELP;
@@ -40,54 +40,55 @@ HELP;
 require __DIR__ . "/../vendor/autoload.php";
 
 $commands = [
-    "setup",
-    "issue",
-    "check",
-    "revoke",
+    "setup" => "Setup and register account.",
+    "issue" => "Issue a new certificate.",
+    "check" => "Check if a certificate is still valid long enough.",
+    "revoke" => "Revoke a certificate.",
+    "version" => "Print version information.",
 ];
 
 $binary = \Kelunik\AcmeClient\getBinary();
 
-$help = implode("\n    ", array_map(function ($command) use ($binary) {
-    return "{$binary} {$command}";
-}, $commands));
+$help = implode(PHP_EOL, array_map(function ($command) use ($commands) {
+    $help = "  <green>{$command}</green>\n";
+    $help .= "  └─ {$commands[$command]}\n";
+    return $help;
+}, array_keys($commands)));
 
 $help = <<<EOT
 
-      ____ __________ ___  ___
-     / __ `/ ___/ __ `__ \/ _ \
-    / /_/ / /__/ / / / / /  __/
-    \__,_/\___/_/ /_/ /_/\___/
+<yellow>Usage:</yellow>
+  bin/acme [command] [--args]
 
-    Usage: bin/acme command --args
+<yellow>Options:</yellow>
+  <green>-h, --help</green>
+  └─ Print this help message.
 
-    Available Commands:
-    {$help}
-
-    Get more help by appending --help to specific commands.
-
+<yellow>Available commands:</yellow>
+{$help}
+Get more help by appending <yellow>--help</yellow> to specific commands.
 
 EOT;
 
 $climate = new CLImate;
 
 if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
-    $climate->error("Please run this script via CLI!");
+    $climate->error("Please run this script on the command line!");
     exit(1);
 }
 
 if (count($argv) === 1 || in_array($argv[1], ["h", "-h", "help", "--help"], true)) {
-    $climate->out($help);
+    $climate->out($logo . $help);
     exit(0);
 }
 
-if (!in_array($argv[1], $commands)) {
-    $climate->br()->error("    Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
+if (!in_array($argv[1], array_keys($commands))) {
+    $climate->error("Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
 
-    $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], $commands);
+    $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], array_keys($commands));
 
     if ($suggestion) {
-        $climate->br()->out("    Did you mean '$suggestion'?");
+        $climate->br()->out("  Did you mean '$suggestion'?");
     }
 
     $climate->br();

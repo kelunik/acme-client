@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "3bfc6d13e53f6be6788859cbdd68b52a",
-    "content-hash": "62b8fb8281fc8a7b9925c115301f4707",
+    "hash": "e1091f4600ce5c211e5c11f89718d7cf",
+    "content-hash": "55e9166fdb7dfbdbda7ef9144e494cdd",
     "packages": [
         {
             "name": "amphp/amp",
@@ -172,16 +172,16 @@
         },
         {
             "name": "amphp/dns",
-            "version": "v0.8.9",
+            "version": "v0.8.10",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/dns.git",
-                "reference": "78cda5692a80ec0a5b50ee7616d93426961836ec"
+                "reference": "9f12b2264f74e0cbad67565308f9e106fb6a5bec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/dns/zipball/78cda5692a80ec0a5b50ee7616d93426961836ec",
-                "reference": "78cda5692a80ec0a5b50ee7616d93426961836ec",
+                "url": "https://api.github.com/repos/amphp/dns/zipball/9f12b2264f74e0cbad67565308f9e106fb6a5bec",
+                "reference": "9f12b2264f74e0cbad67565308f9e106fb6a5bec",
                 "shasum": ""
             },
             "require": {
@@ -236,7 +236,7 @@
                 "dns",
                 "resolve"
             ],
-            "time": "2016-03-24 19:17:04"
+            "time": "2016-03-26 20:35:44"
         },
         {
             "name": "amphp/file",
@@ -1211,17 +1211,67 @@
             "time": "2016-02-26 07:37:29"
         },
         {
+            "name": "league/event",
+            "version": "2.1.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/thephpleague/event.git",
+                "reference": "e4bfc88dbcb60c8d8a2939a71f9813e141bbe4cd"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/thephpleague/event/zipball/e4bfc88dbcb60c8d8a2939a71f9813e141bbe4cd",
+                "reference": "e4bfc88dbcb60c8d8a2939a71f9813e141bbe4cd",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.4.0"
+            },
+            "require-dev": {
+                "henrikbjorn/phpspec-code-coverage": "~1.0.1",
+                "phpspec/phpspec": "~2.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "2.2-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "League\\Event\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Frank de Jonge",
+                    "email": "info@frenky.net"
+                }
+            ],
+            "description": "Event package",
+            "keywords": [
+                "emitter",
+                "event",
+                "listener"
+            ],
+            "time": "2015-05-21 12:24:47"
+        },
+        {
             "name": "macfja/phar-builder",
             "version": "dev-master",
             "source": {
                 "type": "git",
                 "url": "https://github.com/MacFJA/PharBuilder.git",
-                "reference": "a2db582eab26ef7b15144c013408749a79fae361"
+                "reference": "97bfa5ffb2bb8beb26db2d5575e852dd10593ac3"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MacFJA/PharBuilder/zipball/9396c639ca105f4c07649fbc15200297e8981764",
-                "reference": "a2db582eab26ef7b15144c013408749a79fae361",
+                "url": "https://api.github.com/repos/MacFJA/PharBuilder/zipball/8a2d96e9497418729d00df1e86a1778f8a9f3268",
+                "reference": "97bfa5ffb2bb8beb26db2d5575e852dd10593ac3",
                 "shasum": ""
             },
             "require": {
@@ -1229,6 +1279,11 @@
                 "rych/bytesize": "~1.0",
                 "symfony/console": "~2.6",
                 "webignition/readable-duration": "~0"
+            },
+            "require-dev": {
+                "phpmd/phpmd": "^2.4",
+                "sebastian/phpcpd": "^2.0",
+                "squizlabs/php_codesniffer": "^2.5"
             },
             "bin": [
                 "bin/phar-builder",
@@ -1261,7 +1316,7 @@
                 }
             ],
             "description": "CLI tool for create phar of your composer based project",
-            "time": "2016-03-24 00:08:01"
+            "time": "2016-03-27 12:42:09"
         },
         {
             "name": "macfja/symfony-console-filechooser",
@@ -2346,16 +2401,16 @@
         },
         {
             "name": "symfony/console",
-            "version": "v2.8.3",
+            "version": "v2.8.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/console.git",
-                "reference": "56cc5caf051189720b8de974e4746090aaa10d44"
+                "reference": "9a5aef5fc0d4eff86853d44202b02be8d5a20154"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/console/zipball/56cc5caf051189720b8de974e4746090aaa10d44",
-                "reference": "56cc5caf051189720b8de974e4746090aaa10d44",
+                "url": "https://api.github.com/repos/symfony/console/zipball/9a5aef5fc0d4eff86853d44202b02be8d5a20154",
+                "reference": "9a5aef5fc0d4eff86853d44202b02be8d5a20154",
                 "shasum": ""
             },
             "require": {
@@ -2402,7 +2457,7 @@
             ],
             "description": "Symfony Console Component",
             "homepage": "https://symfony.com",
-            "time": "2016-02-28 16:20:50"
+            "time": "2016-03-17 09:19:04"
         },
         {
             "name": "symfony/event-dispatcher",
@@ -2515,16 +2570,16 @@
         },
         {
             "name": "symfony/finder",
-            "version": "v2.8.3",
+            "version": "v2.8.4",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/finder.git",
-                "reference": "877bb4b16ea573cc8c024e9590888fcf7eb7e0f7"
+                "reference": "ca24cf2cd4e3826f571e0067e535758e73807aa1"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/finder/zipball/877bb4b16ea573cc8c024e9590888fcf7eb7e0f7",
-                "reference": "877bb4b16ea573cc8c024e9590888fcf7eb7e0f7",
+                "url": "https://api.github.com/repos/symfony/finder/zipball/ca24cf2cd4e3826f571e0067e535758e73807aa1",
+                "reference": "ca24cf2cd4e3826f571e0067e535758e73807aa1",
                 "shasum": ""
             },
             "require": {
@@ -2560,7 +2615,7 @@
             ],
             "description": "Symfony Finder Component",
             "homepage": "https://symfony.com",
-            "time": "2016-02-22 16:12:45"
+            "time": "2016-03-10 10:53:53"
         },
         {
             "name": "symfony/polyfill-mbstring",
