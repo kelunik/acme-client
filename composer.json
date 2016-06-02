@@ -24,8 +24,7 @@
     "require-dev": {
         "phpunit/phpunit": "^5",
         "fabpot/php-cs-fixer": "^1.9",
-        "macfja/phar-builder": "dev-master#97bfa5ffb2bb8beb26db2d5575e852dd10593ac3",
-        "league/event": "^2.1"
+        "macfja/phar-builder": "dev-events-dev-files"
     },
     "license": "MIT",
     "authors": [
@@ -44,6 +43,12 @@
             "src/functions.php"
         ]
     },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/kelunik/pharbuilder"
+        }
+    ],
     "extra": {
         "phar-builder": {
             "compression": "GZip",
@@ -52,12 +57,12 @@
             "include": ["info", "src", "vendor/kelunik/acme/res", "vendor/amphp/socket/var"],
             "entry-point": "bin/acme",
             "events": {
-                "build.before": [
+                "command.package.start": [
                     "mkdir -p info",
                     "git describe --tags > info/build.version",
                     "php -r 'echo time();' > info/build.time"
                 ],
-                "build.after": [
+                "command.package.end": [
                     "rm -rf info",
                     "chmod +x build/acme-client.phar"
                 ]

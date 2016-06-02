@@ -4,8 +4,8 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "hash": "7b4a707c28194e81f0965c8b893b2bd8",
-    "content-hash": "bc6a0cc7d69a22e9d873e3033fc698f5",
+    "hash": "c27b6e29c15798ac2cf219d7993e5771",
+    "content-hash": "a0b266ee9280981bcacbfac39d0969eb",
     "packages": [
         {
             "name": "amphp/amp",
@@ -1004,16 +1004,16 @@
         },
         {
             "name": "symfony/yaml",
-            "version": "v3.0.6",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/yaml.git",
-                "reference": "0047c8366744a16de7516622c5b7355336afae96"
+                "reference": "eca51b7b65eb9be6af88ad7cc91685f1556f5c9a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/yaml/zipball/0047c8366744a16de7516622c5b7355336afae96",
-                "reference": "0047c8366744a16de7516622c5b7355336afae96",
+                "url": "https://api.github.com/repos/symfony/yaml/zipball/eca51b7b65eb9be6af88ad7cc91685f1556f5c9a",
+                "reference": "eca51b7b65eb9be6af88ad7cc91685f1556f5c9a",
                 "shasum": ""
             },
             "require": {
@@ -1022,7 +1022,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "3.1-dev"
                 }
             },
             "autoload": {
@@ -1049,7 +1049,7 @@
             ],
             "description": "Symfony Yaml Component",
             "homepage": "https://symfony.com",
-            "time": "2016-03-04 07:55:57"
+            "time": "2016-05-26 21:46:24"
         },
         {
             "name": "webmozart/assert",
@@ -1208,7 +1208,7 @@
                 }
             ],
             "description": "A tool to automatically fix PHP code style",
-            "abandoned": "Use friendsofphp/php-cs-fixer instead",
+            "abandoned": "friendsofphp/php-cs-fixer",
             "time": "2016-05-26 23:49:24"
         },
         {
@@ -1263,23 +1263,27 @@
         },
         {
             "name": "macfja/phar-builder",
-            "version": "dev-master",
+            "version": "dev-events-dev-files",
             "source": {
                 "type": "git",
-                "url": "https://github.com/MacFJA/PharBuilder.git",
-                "reference": "97bfa5ffb2bb8beb26db2d5575e852dd10593ac3"
+                "url": "https://github.com/kelunik/PharBuilder.git",
+                "reference": "ca02acf19255255f8bc0f490caaf9c086e64062b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/MacFJA/PharBuilder/zipball/0df8ceedde5a1ed315e88da398a8228f78def6dd",
-                "reference": "97bfa5ffb2bb8beb26db2d5575e852dd10593ac3",
+                "url": "https://api.github.com/repos/kelunik/PharBuilder/zipball/ca02acf19255255f8bc0f490caaf9c086e64062b",
+                "reference": "ca02acf19255255f8bc0f490caaf9c086e64062b",
                 "shasum": ""
             },
             "require": {
+                "league/event": "^2.1",
                 "macfja/symfony-console-filechooser": "0.1",
+                "neutron/signal-handler": "^1.0",
+                "php": ">=5.4.0",
                 "rych/bytesize": "~1.0",
                 "symfony/console": "~2.7",
-                "webignition/readable-duration": "~0"
+                "symfony/process": "^2.7 || ^3.0",
+                "webignition/readable-duration": "^0.2"
             },
             "require-dev": {
                 "phpmd/phpmd": "^2.4",
@@ -1307,7 +1311,14 @@
                     "MacFJA\\PharBuilder\\": "app/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "scripts": {
+                "test": [
+                    "php -l app/",
+                    "phpmd app/ text phpmd.xml.dist",
+                    "phpcpd app/",
+                    "phpcs"
+                ]
+            },
             "license": [
                 "MIT"
             ],
@@ -1317,7 +1328,10 @@
                 }
             ],
             "description": "CLI tool for create phar of your composer based project",
-            "time": "2016-03-27 12:42:09"
+            "support": {
+                "source": "https://github.com/kelunik/PharBuilder/tree/events-dev-files"
+            },
+            "time": "2016-06-02 19:28:27"
         },
         {
             "name": "macfja/symfony-console-filechooser",
@@ -1406,6 +1420,49 @@
                 "object graph"
             ],
             "time": "2015-11-20 12:04:31"
+        },
+        {
+            "name": "neutron/signal-handler",
+            "version": "1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/romainneutron/signal-handler.git",
+                "reference": "5f2069bf4a5901a65be51f57ea60779a279564c1"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/romainneutron/signal-handler/zipball/5f2069bf4a5901a65be51f57ea60779a279564c1",
+                "reference": "5f2069bf4a5901a65be51f57ea60779a279564c1",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.3"
+            },
+            "require-dev": {
+                "phpunit/phpunit": "~3.7"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-0": {
+                    "Neutron": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Romain Neutron",
+                    "email": "imprec@gmail.com",
+                    "homepage": "http://www.lickmychip.com/"
+                }
+            ],
+            "description": "A library to ease the use of signal handling.",
+            "keywords": [
+                "signal"
+            ],
+            "time": "2014-01-15 17:24:13"
         },
         {
             "name": "phpdocumentor/reflection-docblock",
@@ -1520,16 +1577,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "3.3.2",
+            "version": "3.3.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "4862dac433cbdb4438b593fa7f79e07559ba157e"
+                "reference": "44cd8e3930e431658d1a5de7d282d5cb37837fd5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/4862dac433cbdb4438b593fa7f79e07559ba157e",
-                "reference": "4862dac433cbdb4438b593fa7f79e07559ba157e",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/44cd8e3930e431658d1a5de7d282d5cb37837fd5",
+                "reference": "44cd8e3930e431658d1a5de7d282d5cb37837fd5",
                 "shasum": ""
             },
             "require": {
@@ -1579,7 +1636,7 @@
                 "testing",
                 "xunit"
             ],
-            "time": "2016-05-25 06:48:21"
+            "time": "2016-05-27 16:24:29"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -2512,16 +2569,16 @@
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v3.0.6",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/event-dispatcher.git",
-                "reference": "807dde98589f9b2b00624dca326740380d78dbbc"
+                "reference": "0343b2cedd0edb26cdc791212a8eb645c406018b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/807dde98589f9b2b00624dca326740380d78dbbc",
-                "reference": "807dde98589f9b2b00624dca326740380d78dbbc",
+                "url": "https://api.github.com/repos/symfony/event-dispatcher/zipball/0343b2cedd0edb26cdc791212a8eb645c406018b",
+                "reference": "0343b2cedd0edb26cdc791212a8eb645c406018b",
                 "shasum": ""
             },
             "require": {
@@ -2541,7 +2598,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "3.1-dev"
                 }
             },
             "autoload": {
@@ -2568,20 +2625,20 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "https://symfony.com",
-            "time": "2016-05-05 06:56:13"
+            "time": "2016-04-12 18:27:47"
         },
         {
             "name": "symfony/filesystem",
-            "version": "v3.0.6",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/filesystem.git",
-                "reference": "74fec3511b62cb934b64bce1d96f06fffa4beafd"
+                "reference": "5751e80d6f94b7c018f338a4a7be0b700d6f3058"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/filesystem/zipball/74fec3511b62cb934b64bce1d96f06fffa4beafd",
-                "reference": "74fec3511b62cb934b64bce1d96f06fffa4beafd",
+                "url": "https://api.github.com/repos/symfony/filesystem/zipball/5751e80d6f94b7c018f338a4a7be0b700d6f3058",
+                "reference": "5751e80d6f94b7c018f338a4a7be0b700d6f3058",
                 "shasum": ""
             },
             "require": {
@@ -2590,7 +2647,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "3.1-dev"
                 }
             },
             "autoload": {
@@ -2617,7 +2674,7 @@
             ],
             "description": "Symfony Filesystem Component",
             "homepage": "https://symfony.com",
-            "time": "2016-04-12 18:09:53"
+            "time": "2016-04-12 18:27:47"
         },
         {
             "name": "symfony/finder",
@@ -2729,16 +2786,16 @@
         },
         {
             "name": "symfony/process",
-            "version": "v3.0.6",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/process.git",
-                "reference": "53f9407c0bb1c5a79127db8f7bfe12f0f6f3dcdb"
+                "reference": "1574f3451b40fa9bbae518ef71d19a56f409cac0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/process/zipball/53f9407c0bb1c5a79127db8f7bfe12f0f6f3dcdb",
-                "reference": "53f9407c0bb1c5a79127db8f7bfe12f0f6f3dcdb",
+                "url": "https://api.github.com/repos/symfony/process/zipball/1574f3451b40fa9bbae518ef71d19a56f409cac0",
+                "reference": "1574f3451b40fa9bbae518ef71d19a56f409cac0",
                 "shasum": ""
             },
             "require": {
@@ -2747,7 +2804,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "3.1-dev"
                 }
             },
             "autoload": {
@@ -2774,20 +2831,20 @@
             ],
             "description": "Symfony Process Component",
             "homepage": "https://symfony.com",
-            "time": "2016-04-14 15:30:28"
+            "time": "2016-04-12 19:11:33"
         },
         {
             "name": "symfony/stopwatch",
-            "version": "v3.0.6",
+            "version": "v3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/stopwatch.git",
-                "reference": "6015187088421e9499d8f8316bdb396f8b806c06"
+                "reference": "4670f122fa32a4900003a6802f6b8575f3f0b17e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/stopwatch/zipball/6015187088421e9499d8f8316bdb396f8b806c06",
-                "reference": "6015187088421e9499d8f8316bdb396f8b806c06",
+                "url": "https://api.github.com/repos/symfony/stopwatch/zipball/4670f122fa32a4900003a6802f6b8575f3f0b17e",
+                "reference": "4670f122fa32a4900003a6802f6b8575f3f0b17e",
                 "shasum": ""
             },
             "require": {
@@ -2796,7 +2853,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "3.0-dev"
+                    "dev-master": "3.1-dev"
                 }
             },
             "autoload": {
@@ -2823,7 +2880,7 @@
             ],
             "description": "Symfony Stopwatch Component",
             "homepage": "https://symfony.com",
-            "time": "2016-03-04 07:55:57"
+            "time": "2016-03-04 07:56:56"
         },
         {
             "name": "webignition/readable-duration",
