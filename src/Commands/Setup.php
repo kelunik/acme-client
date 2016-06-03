@@ -85,8 +85,6 @@ class Setup implements Command {
     }
 
     public static function getDefinition() {
-
-
         return [
             "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
             "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),

@@ -8,6 +8,7 @@ use Amp\Process;
 use Kelunik\Acme\AcmeException;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
+use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
 class Auto implements Command {
@@ -38,6 +39,10 @@ class Auto implements Command {
             $this->climate->error("Config file ({$configPath}) not found.");
             yield new CoroutineResult(1);
             return;
+        } catch (ParseException $e) {
+            $this->climate->error("Config file ({$configPath}) had an invalid format and couldn't be parsed.");
+            yield new CoroutineResult(1);
+            return;
         }
 
         if (!isset($config["email"])) {
@@ -46,18 +51,10 @@ class Auto implements Command {
             return;
         }
 
-        if (!isset($config["certificates"])) {
-            $this->climate->error("Config file ({$configPath}) didn't have a 'certificates' section.");
+        if (!isset($config["certificates"]) || !is_array($config["certificates"])) {
+            $this->climate->error("Config file ({$configPath}) didn't have a 'certificates' section that's an array.");
             yield new CoroutineResult(2);
             return;
-        }
-
-        if (isset($config["storage"])) {
-            $storage = $config["storage"];
-        }
-
-        if (isset($config["server"])) {
-            $server = $config["server"];
         }
 
         $command = implode(" ", array_map("escapeshellarg", [
@@ -73,27 +70,36 @@ class Auto implements Command {
         ]));
 
         $process = new Process($command);
-        $result = (yield $process->exec());
+        $result = (yield $process->exec(Process::BUFFER_ALL));
 
         if ($result->exit !== 0) {
             $this->climate->error("Registration failed ({$result->exit})");
             $this->climate->error($command);
+            $this->climate->br()->out($result->out);
+            $this->climate->br()->error($result->err);
             yield new CoroutineResult(3);
             return;
         }
 
-        $promises = [];
+        $certificateChunks = array_chunk($config["certificates"], 10);
 
-        foreach ($config["certificates"] as $certificate) {
-            $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $server, $storage));
+        $errors = [];
+
+        foreach ($certificateChunks as $chunk) {
+            $promises = [];
+
+            foreach ($chunk as $certificate) {
+                $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $server, $storage));
+            }
+
+            list($errors) = (yield \Amp\any($promises));
+            $errors = array_merge($errors, $errors);
         }
-
-        list($errors) = (yield \Amp\any($promises));
 
         if (!empty($errors)) {
             foreach ($errors as $i => $error) {
                 $certificate = $config["certificates"][$i];
-                $this->climate->error("Issuance for the following domains failed: " . implode(", ", array_keys($this->toDomainPathMap((array) $certificate->paths))));
+                $this->climate->error("Issuance for the following domains failed: " . implode(", ", array_keys($this->toDomainPathMap($certificate["paths"]))));
                 $this->climate->error("Reason: {$error}");
             }
 
@@ -110,7 +116,7 @@ class Auto implements Command {
      * @throws AcmeException if something does wrong
      */
     private function checkAndIssue(array $certificate, $server, $storage) {
-        $domainPathMap = $this->toDomainPathMap((array) $certificate["paths"]);
+        $domainPathMap = $this->toDomainPathMap($certificate["paths"]);
         $commonName = reset(array_keys($domainPathMap));
 
         $args = [
@@ -137,7 +143,6 @@ class Auto implements Command {
 
         if ($result->exit === 1) {
             // Renew certificate
-
             $args = [
                 PHP_BINARY,
                 $GLOBALS["argv"][0],
@@ -146,9 +151,9 @@ class Auto implements Command {
                 $server,
                 "--storage",
                 $storage,
-                "-d",
+                "--domains",
                 implode(",", array_keys($domainPathMap)),
-                "-p",
+                "--path",
                 implode(PATH_SEPARATOR, array_values($domainPathMap)),
             ];
 
@@ -180,17 +185,15 @@ class Auto implements Command {
     private function toDomainPathMap(array $paths) {
         $result = [];
 
-        foreach ($paths as $pathDomainMap) {
-            foreach ($pathDomainMap as $path => $domains) {
-                $domains = (array) $domains;
+        foreach ($paths as $path => $domains) {
+            $domains = (array) $domains;
 
-                foreach ($domains as $domain) {
-                    if (isset($result[$domain])) {
-                        throw new \LogicException("Duplicate domain: {$domain}");
-                    }
-
-                    $result[$domain] = $path;
+            foreach ($domains as $domain) {
+                if (isset($result[$domain])) {
+                    throw new \LogicException("Duplicate domain: {$domain}");
                 }
+
+                $result[$domain] = $path;
             }
         }
 
@@ -198,7 +201,7 @@ class Auto implements Command {
     }
 
     public static function getDefinition() {
-        return [
+        $args = [
             "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
             "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "config" => [
@@ -208,5 +211,14 @@ class Auto implements Command {
                 "required" => true,
             ],
         ];
+
+        $configPath = \Kelunik\AcmeClient\getConfigPath();
+
+        if ($configPath) {
+            $args["config"]["required"] = false;
+            $args["config"]["defaultValue"] = $configPath;
+        }
+
+        return $args;
     }
 }
