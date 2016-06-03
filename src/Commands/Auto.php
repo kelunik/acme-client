@@ -85,10 +85,10 @@ class Auto implements Command {
 
         $errors = [];
 
-        foreach ($certificateChunks as $chunk) {
+        foreach ($certificateChunks as $certificateChunk) {
             $promises = [];
 
-            foreach ($chunk as $certificate) {
+            foreach ($certificateChunk as $certificate) {
                 $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $server, $storage));
             }
 

@@ -14,6 +14,7 @@ use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
+use Symfony\Component\Yaml\Yaml;
 
 class Setup implements Command {
     private $climate;
@@ -85,7 +86,7 @@ class Setup implements Command {
     }
 
     public static function getDefinition() {
-        return [
+        $args = [
             "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
             "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
             "email" => [
@@ -94,5 +95,18 @@ class Setup implements Command {
                 "required" => true,
             ],
         ];
+
+        $configPath = \Kelunik\AcmeClient\getConfigPath();
+
+        if ($configPath) {
+            $config = Yaml::parse(file_get_contents($configPath));
+
+            if (isset($config["email"]) && is_string($config["email"])) {
+                $args["email"]["required"] = false;
+                $args["email"]["defaultValue"] = $config["email"];
+            }
+        }
+
+        return $args;
     }
 }
