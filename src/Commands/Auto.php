@@ -114,6 +114,15 @@ class Auto implements Command {
             "failure" => count($errors),
         ];
 
+        if ($status["renewed"] > 0) {
+            foreach ($values as $i => $value) {
+                if ($value === self::STATUS_RENEWED) {
+                    $certificate = $config["certificates"][$i];
+                    $this->climate->info("Certificate for " . implode(", ", array_keys($this->toDomainPathMap($certificate["paths"]))) . " successfully renewed.");
+                }
+            }
+        }
+
         if ($status["failure"] > 0) {
             foreach ($errors as $i => $error) {
                 $certificate = $config["certificates"][$i];
@@ -128,6 +137,11 @@ class Auto implements Command {
             yield new CoroutineResult($exitCode);
             return;
         }
+
+        if ($status["renewed"] > 0) {
+            yield new CoroutineResult(self::EXIT_ISSUANCE_OK);
+            return;
+        }
     }
 
     /**
@@ -139,7 +153,8 @@ class Auto implements Command {
      */
     private function checkAndIssue(array $certificate, $server, $storage) {
         $domainPathMap = $this->toDomainPathMap($certificate["paths"]);
-        $commonName = reset(array_keys($domainPathMap));
+        $domains = array_keys($domainPathMap);
+        $commonName = reset($domains);
 
         $args = [
             PHP_BINARY,
@@ -175,7 +190,7 @@ class Auto implements Command {
                 "--storage",
                 $storage,
                 "--domains",
-                implode(",", array_keys($domainPathMap)),
+                implode(",", $domains),
                 "--path",
                 implode(PATH_SEPARATOR, array_values($domainPathMap)),
             ];
