@@ -117,7 +117,7 @@ function normalizePath($path) {
  * @return string|null Resolves to the config path or null.
  */
 function getConfigPath() {
-    $paths = isPhar() ? [substr(dirname(Phar::running(true)), strlen("phar://")) . "acme-client.yml"] : [];
+    $paths = isPhar() ? [substr(dirname(Phar::running(true)), strlen("phar://")) . "/acme-client.yml"] : [];
 
     if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
         if ($home = getenv("HOME")) {
