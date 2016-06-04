@@ -12,6 +12,15 @@ use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
 
 class Auto implements Command {
+    const EXIT_CONFIG_ERROR = 1;
+    const EXIT_SETUP_ERROR = 2;
+    const EXIT_ISSUANCE_ERROR = 3;
+    const EXIT_ISSUANCE_PARTIAL = 4;
+    const EXIT_ISSUANCE_OK = 5;
+
+    const STATUS_NO_CHANGE = 0;
+    const STATUS_RENEWED = 1;
+
     private $climate;
 
     public function __construct(CLImate $climate) {
@@ -37,23 +46,23 @@ class Auto implements Command {
             );
         } catch (FilesystemException $e) {
             $this->climate->error("Config file ({$configPath}) not found.");
-            yield new CoroutineResult(1);
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
             return;
         } catch (ParseException $e) {
             $this->climate->error("Config file ({$configPath}) had an invalid format and couldn't be parsed.");
-            yield new CoroutineResult(1);
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
             return;
         }
 
         if (!isset($config["email"])) {
             $this->climate->error("Config file ({$configPath}) didn't have a 'email' set.");
-            yield new CoroutineResult(2);
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
             return;
         }
 
         if (!isset($config["certificates"]) || !is_array($config["certificates"])) {
             $this->climate->error("Config file ({$configPath}) didn't have a 'certificates' section that's an array.");
-            yield new CoroutineResult(2);
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
             return;
         }
 
@@ -77,13 +86,14 @@ class Auto implements Command {
             $this->climate->error($command);
             $this->climate->br()->out($result->out);
             $this->climate->br()->error($result->err);
-            yield new CoroutineResult(3);
+            yield new CoroutineResult(self::EXIT_SETUP_ERROR);
             return;
         }
 
-        $certificateChunks = array_chunk($config["certificates"], 10);
+        $certificateChunks = array_chunk($config["certificates"], 10, true);
 
         $errors = [];
+        $values = [];
 
         foreach ($certificateChunks as $certificateChunk) {
             $promises = [];
@@ -92,18 +102,30 @@ class Auto implements Command {
                 $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $server, $storage));
             }
 
-            list($errors) = (yield \Amp\any($promises));
-            $errors = array_merge($errors, $errors);
+            list($chunkErrors, $chunkValues) = (yield \Amp\any($promises));
+
+            $errors += $chunkErrors;
+            $values += $chunkValues;
         }
 
-        if (!empty($errors)) {
+        $status = [
+            "no_change" => count(array_filter($values, function($value) { return $value === self::STATUS_NO_CHANGE; })),
+            "renewed" => count(array_filter($values, function($value) { return $value === self::STATUS_RENEWED; })),
+            "failure" => count($errors),
+        ];
+
+        if ($status["failure"] > 0) {
             foreach ($errors as $i => $error) {
                 $certificate = $config["certificates"][$i];
                 $this->climate->error("Issuance for the following domains failed: " . implode(", ", array_keys($this->toDomainPathMap($certificate["paths"]))));
                 $this->climate->error("Reason: {$error}");
             }
 
-            yield new CoroutineResult(3);
+            $exitCode = $status["renewed"] > 0
+                ? self::EXIT_ISSUANCE_PARTIAL
+                : self::EXIT_ISSUANCE_ERROR;
+
+            yield new CoroutineResult($exitCode);
             return;
         }
     }
@@ -134,10 +156,11 @@ class Auto implements Command {
         $command = implode(" ", array_map("escapeshellarg", $args));
 
         $process = new Process($command);
-        $result = (yield $process->exec());
+        $result = (yield $process->exec(Process::BUFFER_ALL));
 
         if ($result->exit === 0) {
             // No need for renewal
+            yield new CoroutineResult(self::STATUS_NO_CHANGE);
             return;
         }
 
@@ -170,16 +193,17 @@ class Auto implements Command {
             $command = implode(" ", array_map("escapeshellarg", $args));
 
             $process = new Process($command);
-            $result = (yield $process->exec());
+            $result = (yield $process->exec(Process::BUFFER_ALL));
 
             if ($result->exit !== 0) {
-                throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'.");
+                throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->out . PHP_EOL . PHP_EOL . $result->err);
             }
 
+            yield new CoroutineResult(self::STATUS_RENEWED);
             return;
         }
 
-        throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'.");
+        throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->out . PHP_EOL . PHP_EOL . $result->err);
     }
 
     private function toDomainPathMap(array $paths) {
