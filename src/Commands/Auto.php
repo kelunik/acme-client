@@ -84,8 +84,8 @@ class Auto implements Command {
         if ($result->exit !== 0) {
             $this->climate->error("Registration failed ({$result->exit})");
             $this->climate->error($command);
-            $this->climate->br()->out($result->out);
-            $this->climate->br()->error($result->err);
+            $this->climate->br()->out($result->stdout);
+            $this->climate->br()->error($result->stderr);
             yield new CoroutineResult(self::EXIT_SETUP_ERROR);
             return;
         }
@@ -211,14 +211,14 @@ class Auto implements Command {
             $result = (yield $process->exec(Process::BUFFER_ALL));
 
             if ($result->exit !== 0) {
-                throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->out . PHP_EOL . PHP_EOL . $result->err);
+                throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->stdout . PHP_EOL . PHP_EOL . $result->stderr);
             }
 
             yield new CoroutineResult(self::STATUS_RENEWED);
             return;
         }
 
-        throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->out . PHP_EOL . PHP_EOL . $result->err);
+        throw new AcmeException("Unexpected exit code ({$result->exit}) for '{$command}'." . PHP_EOL . $result->stdout . PHP_EOL . PHP_EOL . $result->stderr);
     }
 
     private function toDomainPathMap(array $paths) {
