@@ -26,10 +26,12 @@ The configuration file has the following format:
 # Storage directory for certificates and keys.
 storage: /etc/acme
 
-# Server to use. URL to the ACME directory. "letsencrypt" and "letsencrypt:staging" are valid shortcuts.
+# Server to use. URL to the ACME directory.
+# "letsencrypt" and "letsencrypt:staging" are valid shortcuts.
 server: letsencrypt
 
-# E-mail to use for the setup. This e-mail will receive expiration notices from Let's Encrypt.
+# E-mail to use for the setup.
+# This e-mail will receive expiration notices from Let's Encrypt.
 email: me@example.com
 
 # List of certificates to issue.
@@ -41,12 +43,13 @@ certificates:
     #
     # paths: Map of document roots to domains.
     #        /tmp is used here for domains without a real document root.
-    #        The client will place a file into $path/.well-known/acme-challenge/ to verify ownership to the CA
+    #        The client will place a file into $path/.well-known/acme-challenge/
+    #        to verify ownership to the CA
     #
     # bits:  Number of bits for the domain private key
     #
-    # user:  User running the web server. Challenge files are world readable, but some servers might require to be owner
-    #        of files they serve.
+    # user:  User running the web server. Challenge files are world readable,
+    #        but some servers might require to be owner of files they serve.
     #
     - bits: 4096
       paths:
@@ -88,6 +91,5 @@ that script.
 Exit codes `4` and `5` usually need a server reload, to reload the new certificates. It's already handled in the recommended
 cron setup.
 
-If you want a more fine grained control or revoke certificates, you can have a look at the ´
-[advanced usage](./advanced-usage.md) document. The client allows to handle setup / issuance / revocation and other commands
+If you want a more fine grained control or revoke certificates, you can have a look at the [advanced usage](./advanced-usage.md) document. The client allows to handle setup / issuance / revocation and other commands
 separately from `acme-client auto`.
