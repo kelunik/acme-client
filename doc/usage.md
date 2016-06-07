@@ -1,79 +1,95 @@
-# Usage
+# Basic Usage
 
-**The client stores all data in `./data` if you're using the Composer installation method, otherwise in the directory you configured. Be sure to backup this folder regularly. It contains your account keys, domain keys and certificates.**
+The client stores your account keys, domain keys and certificates in a single directory. If you're using the PHAR,
+you usually configure the storage in the configuration file. If you're using it with Composer, all data is stored in `./data`.
 
-Before you can issue certificates, you have to register an account first and read and understand the terms of service of the ACME CA you're using.
-For the Let's Encrypt certificate authority, there's a [subscriber agreement](https://letsencrypt.org/repository/) you have to accept.
+**Be sure to backup that directory regularly.**
 
-By using this client you agree to any agreement and any further updates by continued usage.
-You're responsible to react to updates and stop the automation if you no longer agree with the terms of service.
+Before you can issue certificates, you have to register an account. You have to read and understand the terms of service
+of the certificate authority you're using. For the Let's Encrypt certificate authority, there's a
+[subscriber agreement](https://letsencrypt.org/repository/) you have to accept.
 
-These usage instructions assume you have installed the client globally as a Phar. If you are using the Phar, but don't have it globally, replace `acme-client` with the location to your Phar.
+By using this client you agree to any agreement and any further updates by continued usage. You're responsible to react
+to updates and stop the automation if you no longer agree with the terms of service.
 
-If you're using the client with Composer, replace `acme-client` with `bin/acme`. You have to specify the server with `-s` / `--server`, because there's currently no config file support for this installation method.
+These usage instructions assume you have installed the client globally as a PHAR. If you are using the PHAR,
+but don't have it globally, replace `acme-client` with the location to your PHAR or add that path to your `$PATH` variable.
 
-## Register an Account
+## Configuration
 
+The client can be configured using a (global) configuration file. The client takes the first available of
+`./acme-client.yml` (if running as PHAR), `$HOME/.acme-client.yml`, `/etc/acme-client.yml` (if not on Windows).
+
+The configuration file has the following format:
+
+```yml
+# Storage directory for certificates and keys.
+storage: /etc/acme
+
+# Server to use. URL to the ACME directory.
+# "letsencrypt" and "letsencrypt:staging" are valid shortcuts.
+server: letsencrypt
+
+# E-mail to use for the setup.
+# This e-mail will receive expiration notices from Let's Encrypt.
+email: me@example.com
+
+# List of certificates to issue.
+certificates:
+    # For each certificate, there are a few options.
+    #
+    # Required: paths
+    # Optional: bits, user
+    #
+    # paths: Map of document roots to domains.
+    #        /tmp is used here for domains without a real document root.
+    #        The client will place a file into $path/.well-known/acme-challenge/
+    #        to verify ownership to the CA
+    #
+    # bits:  Number of bits for the domain private key
+    #
+    # user:  User running the web server. Challenge files are world readable,
+    #        but some servers might require to be owner of files they serve.
+    #
+    - bits: 4096
+      paths:
+        /tmp:
+            - docs.example.org
+            - git.example.org
+    # You can have multiple certificate with different users and key options.
+    - user: www-data
+      paths:
+        /var/www: example.org
 ```
-acme-client setup --email me@example.com
-```
 
-After a successful registration you're able to issue certificates.
-This client assumes you have a HTTP server setup and running.
-You must have a document root setup in order to use this client.
+All configuration keys are optional and can be passed as arguments directly (except for `certificates` when using `acme-client auto`).
 
-## Issue a Certificate
+## Certificate Issuance
 
-```
-acme-client issue -d example.com:www.example.com -p /var/www/example.com
-```
+You can use `acme-client auto` to issue certificates and renew them if necessary. It uses the configuration file to
+determine the certificates to request. It will store certificates in the configured storage in a sub directory called `./certs`.
 
-You can separate multiple domains (`-d`) with `,`, `:` or `;`. You can separate multiple document roots (`-p`) with your system's path separator:
- * Colon (`:`) for Unix
- * Semicolon (`;`) for Windows
+If everything has been successful, you'll see a message for each issued certificate. If nothing has to be renewed,
+the script will be quiet to be cron friendly. If an error occurs, the script will dump all available information.
 
-If you specify less paths than domains, the last one will be used for the remaining domains.
-
-Please note that Let's Encrypt has rate limits. Currently it's five certificates per domain per seven days. If you combine multiple subdomains in a single certificate, they count as just one certificate. If you just want to test things out, you can use their staging server, which has way higher rate limits by appending `--s letsencrypt:staging`.
-
-## Revoke a Certificate
-
-To revoke a certificate, you need a valid account key, just like for issuance.
-
-```
-acme-client revoke --name example.com
-```
-
-`--name` is the common name of the certificate that you want to revoke.
-
-## Renewing a Certificate
-
-For renewal, there's the `acme-client check` subcommand.
-It exists with a non-zero exit code, if the certificate is going to expire soon.
-Default check time is 30 days, but you can use `--ttl` to customize it.
-
-You may use this as daily cron:
-
-```
-acme-client check --name example.com || acme-client issue ...
-```
-
-You can also use a more advanced script to automatically reload the server as well. For this example we assume you're using Nginx. Something similar should work for Apache.
+You should execute `acme-client auto` as a daily cron. It's recommended to setup e-mail notifications for all output of
+that script.
 
 ```bash
-#!/usr/bin/env bash
-
-acme-client check --name example.com --ttl 30
-
-if [ $? -eq 1 ]; then
-        acme-client issue -d example.com:www.example.com -p /var/www
-
-        if [ $? -eq 0 ]; then
-                nginx -t -q
-
-                if [ $? -eq 0 ]; then
-                        nginx -s reload
-                fi
-        fi
-fi
+0 0 * * * acme-client auto; exit=$?; if [[ $exit = 4 ]] || [[ $exit = 5 ]]; then service nginx reload; fi
 ```
+
+| Exit Code | Description |
+|-----------|-------------|
+| 0         | Nothing to do, all certificates still valid. |
+| 1         | Config file invalid. |
+| 2         | Issue during account setup. |
+| 3         | Error during issuance. |
+| 4         | Error during issuance, but some certificates could be renewed. |
+| 5         | Everything fine, new certificates have been issued. |
+
+Exit codes `4` and `5` usually need a server reload, to reload the new certificates. It's already handled in the recommended
+cron setup.
+
+If you want a more fine grained control or revoke certificates, you can have a look at the [advanced usage](./advanced-usage.md) document. The client allows to handle setup / issuance / revocation and other commands
+separately from `acme-client auto`.

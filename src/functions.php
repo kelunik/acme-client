@@ -112,42 +112,58 @@ function normalizePath($path) {
 }
 
 /**
+ * Gets the most appropriate config path to use.
+ *
+ * @return string|null Resolves to the config path or null.
+ */
+function getConfigPath() {
+    $paths = isPhar() ? [substr(dirname(Phar::running(true)), strlen("phar://")) . "/acme-client.yml"] : [];
+
+    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
+        if ($home = getenv("HOME")) {
+            $paths[] = $home . "/.acme-client.yml";
+        }
+
+        $paths[] = "/etc/acme-client.yml";
+    }
+
+    do {
+        $path = array_shift($paths);
+
+        if (file_exists($path)) {
+            return $path;
+        }
+    } while (count($paths));
+
+    return null;
+}
+
+/**
  * Returns a consistent argument description for CLIMate. Valid arguments are "server" and "storage".
  *
  * @param string $argument argument name
  * @return array CLIMate argument description
  * @throws AcmeException if the provided acme-client.yml file is invalid
+ * @throws ConfigException if the provided configuration file is invalid
  */
 function getArgumentDescription($argument) {
-    $isPhar = \Kelunik\AcmeClient\isPhar();
-
     $config = [];
 
-    if ($isPhar) {
-        $configPath = substr(dirname(Phar::running(true)), strlen("phar://")) . "/acme-client.yml";
+    if ($configPath = getConfigPath()) {
+        $configContent = file_get_contents($configPath);
 
-        if (file_exists($configPath)) {
-            $configContent = file_get_contents($configPath);
+        try {
+            $config = Yaml::parse($configContent);
 
-            try {
-                $value = Yaml::parse($configContent);
-
-                if (isset($value["server"]) && is_string($value["server"])) {
-                    $config["server"] = $value["server"];
-                    unset($value["server"]);
-                }
-
-                if (isset($value["storage"]) && is_string($value["storage"])) {
-                    $config["storage"] = $value["storage"];
-                    unset($value["storage"]);
-                }
-
-                if (!empty($value)) {
-                    throw new AcmeException("Provided YAML file had unknown options: " . implode(", ", array_keys($value)));
-                }
-            } catch (ParseException $e) {
-                throw new AcmeException("Unable to parse the YAML file ({$configPath}): " . $e->getMessage());
+            if (isset($config["server"]) && !is_string($config["server"])) {
+                throw new ConfigException("'server' set, but not a string.");
             }
+
+            if (isset($config["storage"]) && !is_string($config["storage"])) {
+                throw new ConfigException("'storage' set, but not a string.");
+            }
+        } catch (ParseException $e) {
+            throw new AcmeException("Unable to parse the configuration ({$configPath}): " . $e->getMessage());
         }
     }
 
@@ -168,6 +184,8 @@ function getArgumentDescription($argument) {
             return $argument;
 
         case "storage":
+            $isPhar = isPhar();
+
             $argument = [
                 "longPrefix" => "storage",
                 "description" => "Storage directory for account keys and certificates.",

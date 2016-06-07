@@ -40,6 +40,7 @@ HELP;
 require __DIR__ . "/../vendor/autoload.php";
 
 $commands = [
+    "auto" => "Setup, issue and renew based on a single configuration file.",
     "setup" => "Setup and register account.",
     "issue" => "Issue a new certificate.",
     "check" => "Check if a certificate is still valid long enough.",
