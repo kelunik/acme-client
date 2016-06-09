@@ -1,3 +1,5 @@
 /build/
 /data/
+/info/
 /vendor/
+/config.test.yml
