@@ -68,7 +68,11 @@ class KeyStore {
         try {
             // TODO: Replace with async version once available
             if (!file_exists(dirname($file))) {
-                mkdir(dirname($file), 0755, true);
+                $success = mkdir(dirname($file), 0755, true);
+
+                if (!$success) {
+                    throw new KeyStoreException("Could not create key store directory.");
+                }
             }
 
             yield \Amp\File\put($file, $keyPair->getPrivate());
