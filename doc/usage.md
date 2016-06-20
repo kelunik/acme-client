@@ -41,8 +41,10 @@ certificates:
     # Required: paths
     # Optional: bits, user
     #
-    # paths: Map of document roots to domains.
-    #        /tmp is used here for domains without a real document root.
+    # paths: Map of document roots to domains. Maps each path to one or multiple
+    #        domains. If one domain is given, it's automatically converted to an
+    #        array. The first domain will be the common name.
+    #
     #        The client will place a file into $path/.well-known/acme-challenge/
     #        to verify ownership to the CA
     #
@@ -53,9 +55,9 @@ certificates:
     #
     - bits: 4096
       paths:
-        /tmp:
-            - docs.example.org
-            - git.example.org
+        /var/www/example:
+            - example.org
+            - www.example.org
     # You can have multiple certificate with different users and key options.
     - user: www-data
       paths:
