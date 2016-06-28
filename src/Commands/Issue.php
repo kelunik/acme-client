@@ -174,16 +174,24 @@ class Issue implements Command {
     }
 
     private function checkDnsRecords($domains) {
-        $promises = [];
+        $errors = [];
 
-        foreach ($domains as $domain) {
-            $promises[$domain] = \Amp\Dns\resolve($domain, [
-                "types" => [Record::A],
-                "hosts" => false,
-            ]);
+        $domainChunks = array_chunk($domains, 10, true);
+
+        foreach ($domainChunks as $domainChunk) {
+            $promises = [];
+
+            foreach ($domainChunk as $domain) {
+                $promises[$domain] = \Amp\Dns\resolve($domain, [
+                    "types" => [Record::A],
+                    "hosts" => false,
+                ]);
+            }
+
+            list($chunkErrors) = (yield \Amp\any($promises));
+
+            $errors += $chunkErrors;
         }
-
-        list($errors) = (yield \Amp\any($promises));
 
         if (!empty($errors)) {
             throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(", ", array_keys($errors)));
