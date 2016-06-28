@@ -80,13 +80,21 @@ class Issue implements Command {
         $this->climate->br();
 
         $acme = $this->acmeFactory->build($server, $keyPair);
-        $promises = [];
+        $errors = [];
 
-        foreach ($domains as $i => $domain) {
-            $promises[] = \Amp\resolve($this->solveChallenge($acme, $keyPair, $domain, $docRoots[$i]));
+        $domainChunks = array_chunk($domains, 10, true);
+
+        foreach ($domainChunks as $domainChunk) {
+            $promises = [];
+
+            foreach ($domainChunk as $i => $domain) {
+                $promises[] = \Amp\resolve($this->solveChallenge($acme, $keyPair, $domain, $docRoots[$i]));
+            }
+
+            list($chunkErrors) = (yield \Amp\any($promises));
+
+            $errors += $chunkErrors;
         }
-
-        list($errors) = (yield \Amp\any($promises));
 
         if (!empty($errors)) {
             foreach ($errors as $error) {
