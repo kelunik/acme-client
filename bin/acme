@@ -80,6 +80,11 @@ if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
     exit(1);
 }
 
+if (PHP_VERSION_ID < 50600) {
+    $climate->yellow("You're using an older version of PHP which is no longer supported and will not even receive security fixes anymore. Have a look at http://php.net/supported-versions.php and upgrade now!");
+    $climate->br(2);
+}
+
 if (count($argv) === 1 || in_array($argv[1], ["-h", "help", "--help"], true)) {
     $climate->out($logo . $help);
     exit(0);
