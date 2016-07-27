@@ -183,7 +183,7 @@ class Issue implements Command {
 
             foreach ($domainChunk as $domain) {
                 $promises[$domain] = \Amp\Dns\resolve($domain, [
-                    "types" => [Record::A],
+                    "types" => [Record::A, Record::AAAA],
                     "hosts" => false,
                 ]);
             }
@@ -194,7 +194,7 @@ class Issue implements Command {
         }
 
         if (!empty($errors)) {
-            throw new AcmeException("Couldn't resolve the following domains to an IPv4 record: " . implode(", ", array_keys($errors)));
+            throw new AcmeException("Couldn't resolve the following domains to an IPv4 nor IPv6 record: " . implode(", ", array_keys($errors)));
         }
     }
 
