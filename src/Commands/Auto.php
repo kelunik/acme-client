@@ -37,8 +37,6 @@ class Auto implements Command {
      * @return \Generator
      */
     private function doExecute(Manager $args) {
-        $server = $args->get("server");
-        $storage = $args->get("storage");
         $configPath = $args->get("config");
 
         try {
@@ -51,6 +49,26 @@ class Auto implements Command {
             return;
         } catch (ParseException $e) {
             $this->climate->error("Config file ({$configPath}) had an invalid format and couldn't be parsed.");
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
+            return;
+        }
+
+        if ($args->exists("server")) {
+            $config["server"] = $args->get("server");
+        }
+
+        if ($args->exists("storage")) {
+            $config["storage"] = $args->get("storage");
+        }
+
+        if (!isset($config["server"])) {
+            $this->climate->error("Config file ({$configPath}) didn't have a 'server' set nor was it passed as command line argument.");
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
+            return;
+        }
+
+        if (!isset($config["storage"])) {
+            $this->climate->error("Config file ({$configPath}) didn't have a 'storage' set nor was it passed as command line argument.");
             yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
             return;
         }
@@ -72,9 +90,9 @@ class Auto implements Command {
             $GLOBALS["argv"][0],
             "setup",
             "--server",
-            $server,
+            $config["server"],
             "--storage",
-            $storage,
+            $config["storage"],
             "--email",
             $config["email"],
         ]));
@@ -277,9 +295,15 @@ MESSAGE;
     }
 
     public static function getDefinition() {
+        $server = \Kelunik\AcmeClient\getArgumentDescription("server");
+        $storage = \Kelunik\AcmeClient\getArgumentDescription("storage");
+
+        $server["required"] = false;
+        $storage["required"] = false;
+
         $args = [
-            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
-            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
+            "server" => $server,
+            "storage" => $storage,
             "config" => [
                 "prefix" => "c",
                 "longPrefix" => "config",
