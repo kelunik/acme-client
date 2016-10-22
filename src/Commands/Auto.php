@@ -55,9 +55,13 @@ class Auto implements Command {
 
         if ($args->defined("server")) {
             $config["server"] = $args->get("server");
+        } else if (!isset($config["server"]) && $args->exists("server")) {
+            $config["server"] = $args->get("server");
         }
 
         if ($args->defined("storage")) {
+            $config["storage"] = $args->get("storage");
+        } else if (!isset($config["storage"]) && $args->exists("storage")) {
             $config["storage"] = $args->get("storage");
         }
 
