@@ -118,7 +118,7 @@ class Auto implements Command {
             $promises = [];
 
             foreach ($certificateChunk as $certificate) {
-                $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $server, $storage));
+                $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $config["server"], $config["storage"]));
             }
 
             list($chunkErrors, $chunkValues) = (yield \Amp\any($promises));
