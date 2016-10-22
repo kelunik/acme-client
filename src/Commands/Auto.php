@@ -53,11 +53,11 @@ class Auto implements Command {
             return;
         }
 
-        if ($args->exists("server")) {
+        if ($args->defined("server")) {
             $config["server"] = $args->get("server");
         }
 
-        if ($args->exists("storage")) {
+        if ($args->defined("storage")) {
             $config["storage"] = $args->get("storage");
         }
 

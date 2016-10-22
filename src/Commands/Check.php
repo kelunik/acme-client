@@ -45,7 +45,7 @@ class Check implements Command {
         $this->climate->br();
         $this->climate->whisper("    Certificate is valid until " . date("d.m.Y", $cert->getValidTo()))->br();
 
-        if ($args->exists("names")) {
+        if ($args->defined("names")) {
             $names = array_map("trim", explode(",", $args->get("names")));
             $missingNames = array_diff($names, $cert->getNames());
 
