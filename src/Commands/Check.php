@@ -45,6 +45,18 @@ class Check implements Command {
         $this->climate->br();
         $this->climate->whisper("    Certificate is valid until " . date("d.m.Y", $cert->getValidTo()))->br();
 
+        if ($args->exists("names")) {
+            $names = array_map("trim", explode(",", $args->get("names")));
+            $missingNames = array_diff($names, $cert->getNames());
+
+            if ($missingNames) {
+                $this->climate->comment("    The following names are not covered: " . implode(", ", $missingNames))->br();
+
+                yield new CoroutineResult(1);
+                return;
+            }
+        }
+
         if ($cert->getValidTo() > time() + $args->get("ttl") * 24 * 60 * 60) {
             yield new CoroutineResult(0);
             return;
@@ -69,6 +81,11 @@ class Check implements Command {
                 "description" => "Minimum valid time in days.",
                 "defaultValue" => 30,
                 "castTo" => "int",
+            ],
+            "names" => [
+                "longPrefix" => "names",
+                "description" => "Names that must be covered by the certificate identified based on the common name. Names have to be separated by commas.",
+                "required" => false,
             ],
         ];
     }

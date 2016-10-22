@@ -185,6 +185,8 @@ class Auto implements Command {
             $storage,
             "--name",
             $commonName,
+            "--names",
+            implode(",", $domains),
         ];
 
         $command = implode(" ", array_map("escapeshellarg", $args));
