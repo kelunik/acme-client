@@ -78,7 +78,7 @@ You should execute `acme-client auto` as a daily cron. It's recommended to setup
 that script.
 
 ```sh
-0 0 * * * /usr/local/sbin/acme-client auto; RC=$?; if [[ $RC = 4 ]] || [[ $RC = 5 ]]; then /usr/sbin/service nginx reload; fi
+0 0 * * * /usr/local/sbin/acme-client auto; RC=$?; if [ $RC = 4 ] || [ $RC = 5 ]; then /usr/sbin/service nginx reload; fi
 ```
 The path to `acme-client` should be modified to suit your system. The full path should be used as the system path may not be set up in your cron environment.
 
