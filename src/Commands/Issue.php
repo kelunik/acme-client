@@ -153,7 +153,7 @@ class Issue implements Command {
         $challengeStore = new ChallengeStore($path);
 
         try {
-            $challengeStore->put($token, $payload, isset($user) ? $user : null);
+            yield $challengeStore->put($token, $payload, isset($user) ? $user : null);
 
             yield $acme->verifyHttp01Challenge($domain, $token, $payload);
             yield $acme->answerChallenge($challenge->uri, $payload);
