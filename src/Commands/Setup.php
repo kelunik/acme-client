@@ -3,6 +3,7 @@
 namespace Kelunik\AcmeClient\Commands;
 
 use Amp\CoroutineResult;
+use Amp\Dns\NoRecordException;
 use Amp\Dns\Record;
 use Amp\Dns\ResolutionException;
 use InvalidArgumentException;
@@ -80,8 +81,10 @@ class Setup implements Command {
 
         try {
             yield \Amp\Dns\query($host, Record::MX);
-        } catch (ResolutionException $e) {
+        } catch (NoRecordException $e) {
             throw new AcmeException("No MX record defined for '{$host}'");
+        } catch (ResolutionException $e) {
+            throw new AcmeException("Dns query for an MX record on '{$host}' failed for the following reason: " . $e->getMessage(), null, $e);
         }
     }
 
