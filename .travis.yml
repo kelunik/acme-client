@@ -13,7 +13,7 @@ cache:
 install:
   - phpenv config-rm xdebug.ini || true
   - composer config --global discard-changes true
-  - composer install
+  - composer update
   - composer require satooshi/php-coveralls dev-master --dev
   - composer show --installed
 
