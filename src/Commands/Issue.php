@@ -194,7 +194,13 @@ class Issue implements Command {
         }
 
         if (!empty($errors)) {
-            throw new AcmeException("Couldn't resolve the following domains to an IPv4 nor IPv6 record: " . implode(", ", array_keys($errors)));
+            $failedDomains = implode(", ", array_keys($errors));
+            $reasons = implode("\n\n", array_map(function ($exception) {
+                /** @var \Exception|\Throwable $exception */
+                return get_class($exception) . ": " . $exception->getMessage();
+            }, $errors));
+
+            throw new AcmeException("Couldn't resolve the following domains to an IPv4 nor IPv6 record: {$failedDomains}\n\n{$reasons}");
         }
     }
 
