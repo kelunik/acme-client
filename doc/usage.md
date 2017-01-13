@@ -77,10 +77,26 @@ the script will be quiet to be cron friendly. If an error occurs, the script wil
 You should execute `acme-client auto` as a daily cron. It's recommended to setup e-mail notifications for all output of
 that script.
 
-```sh
-0 0 * * * /usr/local/sbin/acme-client auto; RC=$?; if [ $RC = 4 ] || [ $RC = 5 ]; then /usr/sbin/service nginx reload; fi
+Create a new script, e.g. in `/usr/local/bin/acme-renew`. The `PATH` might need to be modified to suit your system. 
+
+```bash
+#!/usr/bin/env bash
+
+export PATH='/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+acme-client auto
+
+RC=$?
+
+if [ $RC = 4 ] || [ $RC = 5 ]; then
+    service nginx reload
+fi
 ```
-The path to `acme-client` should be modified to suit your system. The full path should be used as the system path may not be set up in your cron environment.
+
+```sh
+# Cron Job Configuration
+0 0 * * * /usr/local/bin/acme-renew
+```
 
 | Exit Code | Description |
 |-----------|-------------|
