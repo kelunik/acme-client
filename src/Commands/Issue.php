@@ -82,7 +82,9 @@ class Issue implements Command {
         $acme = $this->acmeFactory->build($server, $keyPair);
         $errors = [];
 
-        $domainChunks = array_chunk($domains, 10, true);
+        $concurrency = $args->get("challenge-concurrency");
+
+        $domainChunks = array_chunk($domains, \min(20, \max($concurrency, 1)), true);
 
         foreach ($domainChunks as $domainChunk) {
             $promises = [];
@@ -249,6 +251,12 @@ class Issue implements Command {
                 "longPrefix" => "bits",
                 "description" => "Length of the private key in bit.",
                 "defaultValue" => 2048,
+                "castTo" => "int",
+            ],
+            "challenge-concurrency" => [
+                "longPrefix" => "challenge-concurrency",
+                "description" => "Number of challenges to be solved concurrently.",
+                "defaultValue" => 10,
                 "castTo" => "int",
             ],
         ];

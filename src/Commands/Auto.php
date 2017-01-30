@@ -89,6 +89,14 @@ class Auto implements Command {
             return;
         }
 
+        if (isset($config["challenge-concurrency"]) && !is_numeric($config["challenge-concurrency"])) {
+            $this->climate->error("Config file ({$configPath}) defines an invalid 'challenge-concurrency' value.");
+            yield new CoroutineResult(self::EXIT_CONFIG_ERROR);
+            return;
+        }
+
+        $concurrency = isset($config["challenge-concurrency"]) ? (int) $config["challenge-concurrency"] : null;
+
         $command = implode(" ", array_map("escapeshellarg", [
             PHP_BINARY,
             $GLOBALS["argv"][0],
@@ -113,22 +121,16 @@ class Auto implements Command {
             return;
         }
 
-        $certificateChunks = array_chunk($config["certificates"], 10, true);
-
         $errors = [];
         $values = [];
 
-        foreach ($certificateChunks as $certificateChunk) {
-            $promises = [];
-
-            foreach ($certificateChunk as $certificate) {
-                $promises[] = \Amp\resolve($this->checkAndIssue($certificate, $config["server"], $config["storage"]));
+        foreach ($config["certificates"] as $i => $certificate) {
+            try {
+                $result = (yield \Amp\resolve($this->checkAndIssue($certificate, $config["server"], $config["storage"], $concurrency)));
+                $values[$i] = $result;
+            } catch (\Exception $e) {
+                $errors[$i] = $e;
             }
-
-            list($chunkErrors, $chunkValues) = (yield \Amp\any($promises));
-
-            $errors += $chunkErrors;
-            $values += $chunkValues;
         }
 
         $status = [
@@ -171,10 +173,11 @@ class Auto implements Command {
      * @param array  $certificate certificate configuration
      * @param string $server server to use for issuance
      * @param string $storage storage directory
+     * @param int|null $concurrency concurrent challenges
      * @return \Generator
      * @throws AcmeException if something does wrong
      */
-    private function checkAndIssue(array $certificate, $server, $storage) {
+    private function checkAndIssue(array $certificate, $server, $storage, $concurrency = null) {
         $domainPathMap = $this->toDomainPathMap($certificate["paths"]);
         $domains = array_keys($domainPathMap);
         $commonName = reset($domains);
@@ -228,6 +231,11 @@ class Auto implements Command {
             if (isset($certificate["bits"])) {
                 $args[] = "--bits";
                 $args[] = $certificate["bits"];
+            }
+
+            if ($concurrency) {
+                $args[] = "--challenge-concurrency";
+                $args[] = $concurrency;
             }
 
             $command = implode(" ", array_map("escapeshellarg", $args));
