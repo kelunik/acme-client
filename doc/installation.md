@@ -2,7 +2,7 @@
 
 ## Installation using Phar
 
-This is the preferred installation method for usage on a production system.
+This is the preferred installation method for usage on a production system. You can download `acme-client.phar` in the [release section](https://github.com/kelunik/acme-client/releases).
 
 ### Requirements
 
