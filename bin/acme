@@ -135,6 +135,7 @@ try {
 $injector = new Injector;
 $injector->share($climate);
 $injector->share(new AcmeFactory);
+$injector->share(new Amp\Artax\Client(new Amp\Artax\Cookie\NullCookieJar));
 
 $command = $injector->make($class);
 
