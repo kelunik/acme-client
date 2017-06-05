@@ -54,13 +54,13 @@ certificates:
     #        but some servers might require to be owner of files they serve.
     #
     - bits: 4096
-      paths:
+    - paths:
         /var/www/example:
             - example.org
             - www.example.org
     # You can have multiple certificate with different users and key options.
     - user: www-data
-      paths:
+    - paths:
         /var/www: example.org
 ```
 
