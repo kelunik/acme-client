@@ -1,0 +1,40 @@
+# Storage directory for certificates and keys.
+storage: /etc/acme
+
+# Server to use. URL to the ACME directory.
+# "letsencrypt" and "letsencrypt:staging" are valid shortcuts.
+server: letsencrypt
+
+# E-mail to use for the setup.
+# This e-mail will receive expiration notices from Let's Encrypt.
+email: me@example.com
+
+# List of certificates to issue.
+certificates:
+    # For each certificate, there are a few options.
+    #
+    # Required: paths
+    # Optional: bits, user
+    #
+    # paths: Map of document roots to domains. Maps each path to one or multiple
+    #        domains. If one domain is given, it's automatically converted to an
+    #        array. The first domain will be the common name.
+    #
+    #        The client will place a file into /.well-known/acme-challenge/
+    #        to verify ownership to the CA
+    #
+    # bits:  Number of bits for the domain private key
+    #
+    # user:  User running the web server. Challenge files are world readable,
+    #        but some servers might require to be owner of files they serve.
+    #
+    - bits: 4096
+      paths:
+        /var/www/example:
+            - example.org
+            - www.example.org
+    # You can have multiple certificate with different users and key options.
+    - user: www-data
+      paths:
+        /var/www: example.org
+
