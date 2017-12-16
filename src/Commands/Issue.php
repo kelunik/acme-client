@@ -109,11 +109,16 @@ class Issue implements Command {
         $path = "certs/" . $keyFile . "/" . reset($domains) . "/key.pem";
         $bits = $args->get("bits");
 
-        try {
-            $keyPair = (yield $keyStore->get($path));
-        } catch (KeyStoreException $e) {
+        if ($args->get("regenerate-keys")) {
             $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
             $keyPair = (yield $keyStore->put($path, $keyPair));
+        } else {
+            try {
+                $keyPair = (yield $keyStore->get($path));
+            } catch (KeyStoreException $e) {
+                $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
+                $keyPair = (yield $keyStore->put($path, $keyPair));
+          }
         }
 
         $this->climate->br();
@@ -258,6 +263,11 @@ class Issue implements Command {
                 "description" => "Number of challenges to be solved concurrently.",
                 "defaultValue" => 10,
                 "castTo" => "int",
+            ],
+            "regenerate-keys" => [
+              "longPrefix" => "regenerate-keys",
+              "description" => "Regenerate private/public keys even if an existing key pair is found.",
+              "noValue" => true,
             ],
         ];
     }
