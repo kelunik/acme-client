@@ -2,4 +2,5 @@
 
 namespace Kelunik\AcmeClient;
 
-class ConfigException extends \Exception { }
+class ConfigException extends \Exception {
+}

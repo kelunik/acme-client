@@ -11,20 +11,20 @@
         "tls"
     ],
     "require": {
-        "php": "^5.5|^7",
+        "php": ">=7",
         "ext-openssl": "*",
-        "amphp/process": "^0.1.1",
-        "kelunik/acme": "^0.3",
+        "amphp/process": "^0.2",
+        "kelunik/acme": "^0.5",
         "kelunik/certificate": "^1",
-        "league/climate": "^3",
-        "rdlowrey/auryn": "^1",
-        "webmozart/assert": "^1",
+        "league/climate": "^3.2",
+        "rdlowrey/auryn": "^1.4.2",
+        "webmozart/assert": "^1.2",
         "symfony/yaml": "^3.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^4|^5",
-        "friendsofphp/php-cs-fixer": "^1.9",
-        "macfja/phar-builder": "^0.2.5"
+        "phpunit/phpunit": "^6",
+        "friendsofphp/php-cs-fixer": "^2.9",
+        "macfja/phar-builder": "^0.2.6"
     },
     "license": "MIT",
     "authors": [
@@ -33,8 +33,6 @@
             "email": "me@kelunik.com"
         }
     ],
-    "minimum-stability": "dev",
-    "prefer-stable": true,
     "autoload": {
         "psr-4": {
             "Kelunik\\AcmeClient\\": "src"
@@ -43,12 +41,6 @@
             "src/functions.php"
         ]
     },
-    "repositories": [
-        {
-            "type": "vcs",
-            "url": "https://github.com/kelunik/pharbuilder"
-        }
-    ],
     "extra": {
         "phar-builder": {
             "compression": "GZip",

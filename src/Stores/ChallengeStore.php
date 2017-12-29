@@ -2,72 +2,56 @@
 
 namespace Kelunik\AcmeClient\Stores;
 
-use InvalidArgumentException;
-use Webmozart\Assert\Assert;
+use Amp\File;
+use Amp\Promise;
+use function Amp\call;
 
 class ChallengeStore {
     private $docroot;
 
-    public function __construct($docroot) {
-        if (!is_string($docroot)) {
-            throw new InvalidArgumentException(sprintf("\$docroot must be of type string, %s given.", gettype($docroot)));
-        }
-
-        $this->docroot = rtrim(str_replace("\\", "/", $docroot), "/");
+    public function __construct(string $docroot) {
+        $this->docroot = rtrim(str_replace("\\", '/', $docroot), '/');
     }
 
-    public function put($token, $payload, $user = null) {
-        return \Amp\resolve($this->doPut($token, $payload, $user));
-    }
+    public function put(string $token, string $payload, string $user = null): Promise {
+        return call(function () use ($token, $payload, $user) {
+            $path = $this->docroot . '/.well-known/acme-challenge';
+            $userInfo = null;
 
-    private function doPut($token, $payload, $user = null) {
-        Assert::string($token, "Token must be a string. Got: %s");
-        Assert::string($payload, "Payload must be a string. Got: %s");
-        Assert::nullOrString($user, "User must be a string or null. Got: %s");
+            if (!yield File\exists($this->docroot)) {
+                throw new ChallengeStoreException("Document root doesn't exist: '{$this->docroot}'");
+            }
 
-        $path = $this->docroot . "/.well-known/acme-challenge";
-        $realpath = realpath($path);
+            if (!yield File\isdir($path) && !yield File\mkdir($path, 0644, true) && !yield File\isdir($path)) {
+                throw new ChallengeStoreException("Couldn't create key directory: '{$path}'");
+            }
 
-        if (!realpath($this->docroot)) {
-            throw new ChallengeStoreException("Document root doesn't exist: '{$this->docroot}'");
-        }
-
-        if (!$realpath && !@mkdir($path, 0755, true)) {
-            throw new ChallengeStoreException("Couldn't create public directory to serve the challenges: '{$path}'");
-        }
-
-        if ($user) {
-            if (!$userInfo = posix_getpwnam($user)) {
+            if ($user && !$userInfo = posix_getpwnam($user)) {
                 throw new ChallengeStoreException("Unknown user: '{$user}'");
             }
-        }
 
-        if (isset($userInfo)) {
-            yield \Amp\File\chown($this->docroot . "/.well-known", $userInfo["uid"], -1);
-            yield \Amp\File\chown($this->docroot . "/.well-known/acme-challenge", $userInfo["uid"], -1);
-        }
+            if ($userInfo !== null) {
+                yield File\chown($this->docroot . '/.well-known', $userInfo['uid'], -1);
+                yield File\chown($this->docroot . '/.well-known/acme-challenge', $userInfo['uid'], -1);
+            }
 
-        yield \Amp\File\put("{$path}/{$token}", $payload);
+            yield \Amp\File\put("{$path}/{$token}", $payload);
 
-        if (isset($userInfo)) {
-            yield \Amp\File\chown("{$path}/{$token}", $userInfo["uid"], -1);
-        }
+            if ($userInfo !== null) {
+                yield \Amp\File\chown("{$path}/{$token}", $userInfo['uid'], -1);
+            }
 
-        yield \Amp\File\chmod("{$path}/{$token}", 0644);
+            yield \Amp\File\chmod("{$path}/{$token}", 0644);
+        });
     }
 
-    public function delete($token) {
-        return \Amp\resolve($this->doDelete($token));
-    }
+    public function delete(string $token): Promise {
+        return call(function () use ($token) {
+            $path = $this->docroot . "/.well-known/acme-challenge/{$token}";
 
-    private function doDelete($token) {
-        Assert::string($token, "Token must be a string. Got: %s");
-
-        $path = $this->docroot . "/.well-known/acme-challenge/{$token}";
-        $realpath = realpath($path);
-
-        if ($realpath) {
-            yield \Amp\File\unlink($realpath);
-        }
+            if (yield File\exists($path)) {
+                yield \Amp\File\unlink($path);
+            }
+        });
     }
 }

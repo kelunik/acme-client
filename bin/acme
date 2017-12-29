@@ -1,6 +1,7 @@
 #!/usr/bin/env php
 <?php
 
+use Amp\Loop;
 use Auryn\Injector;
 use Kelunik\AcmeClient\AcmeFactory;
 use League\CLImate\CLImate;
@@ -13,7 +14,7 @@ $logo = <<<LOGO
 
 LOGO;
 
-if (!file_exists(__DIR__ . "/../vendor/autoload.php")) {
+if (!file_exists(__DIR__ . '/../vendor/autoload.php')) {
     echo $logo;
     echo <<<HELP
 
@@ -26,7 +27,7 @@ HELP;
     exit(-1);
 }
 
-if (!function_exists("openssl_pkey_get_private")) {
+if (!function_exists('openssl_pkey_get_private')) {
     echo $logo;
     echo <<<HELP
 
@@ -37,17 +38,17 @@ HELP;
     exit(-2);
 }
 
-require __DIR__ . "/../vendor/autoload.php";
+require __DIR__ . '/../vendor/autoload.php';
 
 $commands = [
-    "auto" => "Setup, issue and renew based on a single configuration file.",
-    "setup" => "Setup and register account.",
-    "issue" => "Issue a new certificate.",
-    "check" => "Check if a certificate is still valid long enough.",
-    "revoke" => "Revoke a certificate.",
-    "status" => "Show status about local certificates.",
-    "version" => "Print version information.",
-    "help" => "Print this help information.",
+    'auto' => 'Setup, issue and renew based on a single configuration file.',
+    'setup' => 'Setup and register account.',
+    'issue' => 'Issue a new certificate.',
+    'check' => 'Check if a certificate is still valid long enough.',
+    'revoke' => 'Revoke a certificate.',
+    'status' => 'Show status about local certificates.',
+    'version' => 'Print version information.',
+    'help' => 'Print this help information.',
 ];
 
 $binary = \Kelunik\AcmeClient\getBinary();
@@ -75,22 +76,22 @@ EOT;
 
 $climate = new CLImate;
 
-if (!in_array(PHP_SAPI, ["cli", "phpdbg"], true)) {
-    $climate->error("Please run this script on the command line!");
+if (!in_array(PHP_SAPI, ['cli', 'phpdbg'], true)) {
+    $climate->error('Please run this script on the command line!');
     exit(1);
 }
 
-if (PHP_VERSION_ID < 50600) {
-    $climate->yellow("You're using an older version of PHP which is no longer supported and will not even receive security fixes anymore. Have a look at http://php.net/supported-versions.php and upgrade now!");
+if (PHP_VERSION_ID < 70000) {
+    $climate->yellow("You're using an older version of PHP which is no longer supported by this client. Have a look at http://php.net/supported-versions.php and upgrade at least to PHP 7.0!");
     $climate->br(2);
 }
 
-if (count($argv) === 1 || in_array($argv[1], ["-h", "help", "--help"], true)) {
+if (count($argv) === 1 || in_array($argv[1], ['-h', 'help', '--help'], true)) {
     $climate->out($logo . $help);
     exit(0);
 }
 
-if (!in_array($argv[1], array_keys($commands))) {
+if (!array_key_exists($argv[1], $commands)) {
     $climate->error("Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
 
     $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], array_keys($commands));
@@ -114,14 +115,14 @@ try {
 
     $climate->arguments->add($definition);
 
-    if (count($argv) === 3 && in_array($argv[2], ["-h", "--help"], true)) {
+    if (count($argv) === 3 && in_array($argv[2], ['-h', '--help'], true)) {
         $climate->usage(["{$binary} {$argv[1]}"]);
         $climate->br();
 
         exit(0);
-    } else {
-        $climate->arguments->parse(array_values($args));
     }
+
+    $climate->arguments->parse(array_values($args));
 } catch (Exception $e) {
     $climate->usage(["{$binary} {$argv[1]}"]);
     $climate->br();
@@ -135,16 +136,16 @@ try {
 $injector = new Injector;
 $injector->share($climate);
 $injector->share(new AcmeFactory);
-$injector->share(new Amp\Artax\Client(new Amp\Artax\Cookie\NullCookieJar));
+$injector->share(new Amp\Artax\DefaultClient);
 
 $command = $injector->make($class);
 
-Amp\run(function () use ($command, $climate) {
+Loop::run(function () use ($command, $climate) {
     $handler = function ($e) use ($climate) {
         $error = (string) $e;
         $lines = explode("\n", $error);
         $lines = array_filter($lines, function ($line) {
-            return strlen($line) && $line[0] !== "#" && $line !== "Stack trace:";
+            return $line !== '' && $line[0] !== '#' && $line !== 'Stack trace:';
         });
 
         foreach ($lines as $line) {
@@ -155,7 +156,7 @@ Amp\run(function () use ($command, $climate) {
     };
 
     try {
-        $exitCode = (yield $command->execute($climate->arguments));
+        $exitCode = yield $command->execute($climate->arguments);
 
         if ($exitCode === null) {
             exit(0);
@@ -164,9 +165,7 @@ Amp\run(function () use ($command, $climate) {
         exit($exitCode);
     } catch (Throwable $e) {
         $handler($e);
-    } catch (Exception $e) {
-        $handler($e);
     }
 
-    Amp\stop();
+    Loop::stop();
 });

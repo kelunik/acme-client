@@ -2,8 +2,5 @@
 
 namespace Kelunik\AcmeClient\Stores;
 
-use RuntimeException;
-
-class CertificateStoreException extends RuntimeException {
-
+class CertificateStoreException extends \Exception {
 }

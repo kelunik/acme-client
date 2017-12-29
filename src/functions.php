@@ -2,12 +2,30 @@
 
 namespace Kelunik\AcmeClient;
 
+use Amp\Sync\LocalSemaphore;
+use Amp\Sync\Lock;
 use InvalidArgumentException;
 use Kelunik\Acme\AcmeException;
 use Phar;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
-use Webmozart\Assert\Assert;
+use function Amp\call;
+use function Amp\coroutine;
+
+function concurrentMap(int $concurrency, array $values, callable $functor): array {
+    $semaphore = new LocalSemaphore($concurrency);
+
+    return \array_map(coroutine(function ($value, $key) use ($semaphore, $functor) {
+        /** @var Lock $lock */
+        $lock = yield $semaphore->acquire();
+
+        try {
+            return yield call($functor, $value, $key);
+        } finally {
+            $lock->release();
+        }
+    }), $values, array_keys($values));
+}
 
 /**
  * Suggests a command based on similarity in a list of available commands.
@@ -15,15 +33,13 @@ use Webmozart\Assert\Assert;
  * @param string $badCommand invalid command
  * @param array  $commands list of available commands
  * @param int    $suggestThreshold similarity threshold
+ *
  * @return string suggestion or empty string if no command is similar enough
  */
-function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
-    Assert::string($badCommand, "Bad command must be a string. Got: %s");
-    Assert::integer($suggestThreshold, "Suggest threshold must be an integer. Got: %s");
-
+function suggestCommand(string $badCommand, array $commands, int $suggestThreshold = 70): string {
     $badCommand = strtolower($badCommand);
 
-    $bestMatch = "";
+    $bestMatch = '';
     $bestMatchPercentage = 0;
     $byRefPercentage = 0;
 
@@ -36,7 +52,7 @@ function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
         }
     }
 
-    return $bestMatchPercentage >= $suggestThreshold ? $bestMatch : "";
+    return $bestMatchPercentage >= $suggestThreshold ? $bestMatch : '';
 }
 
 /**
@@ -44,46 +60,46 @@ function suggestCommand($badCommand, array $commands, $suggestThreshold = 70) {
  * protocol is passed, it will default to HTTPS.
  *
  * @param string $uri URI to resolve
+ *
  * @return string resolved URI
  */
-function resolveServer($uri) {
-    Assert::string($uri, "URI must be a string. Got: %s");
-
+function resolveServer(string $uri): string {
     $shortcuts = [
-        "letsencrypt" => "https://acme-v01.api.letsencrypt.org/directory",
-        "letsencrypt:production" => "https://acme-v01.api.letsencrypt.org/directory",
-        "letsencrypt:staging" => "https://acme-staging.api.letsencrypt.org/directory",
+        'letsencrypt' => 'https://acme-v01.api.letsencrypt.org/directory',
+        'letsencrypt:production' => 'https://acme-v01.api.letsencrypt.org/directory',
+        'letsencrypt:staging' => 'https://acme-staging.api.letsencrypt.org/directory',
     ];
 
     if (isset($shortcuts[$uri])) {
         return $shortcuts[$uri];
     }
 
-    if (strpos($uri, "/") === false) {
-        throw new InvalidArgumentException("Invalid server URI: " . $uri);
+    if (strpos($uri, '/') === false) {
+        throw new InvalidArgumentException('Invalid server URI: ' . $uri);
     }
 
-    $protocol = substr($uri, 0, strpos($uri, "://"));
+    $protocol = substr($uri, 0, strpos($uri, '://'));
 
     if (!$protocol || $protocol === $uri) {
         return "https://{$uri}";
-    } else {
-        return $uri;
     }
+
+    return $uri;
 }
 
 /**
  * Transforms a directory URI to a valid filename for usage as key file name.
  *
  * @param string $server URI to the directory
+ *
  * @return string identifier usable as file name
  */
-function serverToKeyname($server) {
-    $server = substr($server, strpos($server, "://") + 3);
+function serverToKeyname(string $server): string {
+    $server = substr($server, strpos($server, '://') + 3);
 
-    $keyFile = str_replace("/", ".", $server);
-    $keyFile = preg_replace("@[^a-z0-9._-]@", "", $keyFile);
-    $keyFile = preg_replace("@\\.+@", ".", $keyFile);
+    $keyFile = str_replace('/', '.', $server);
+    $keyFile = preg_replace('@[^a-z0-9._-]@', '', $keyFile);
+    $keyFile = preg_replace("@\\.+@", '.', $keyFile);
 
     return $keyFile;
 }
@@ -93,22 +109,23 @@ function serverToKeyname($server) {
  *
  * @return bool {@code true} if running as Phar, {@code false} otherwise
  */
-function isPhar() {
-    if (!class_exists("Phar")) {
+function isPhar(): bool {
+    if (!class_exists('Phar')) {
         return false;
     }
 
-    return Phar::running(true) !== "";
+    return Phar::running() !== '';
 }
 
 /**
  * Normalizes a path. Replaces all backslashes with slashes and removes trailing slashes.
  *
  * @param string $path path to normalize
+ *
  * @return string normalized path
  */
-function normalizePath($path) {
-    return rtrim(str_replace("\\", "/", $path), "/");
+function normalizePath(string $path): string {
+    return rtrim(str_replace("\\", '/', $path), '/');
 }
 
 /**
@@ -117,14 +134,14 @@ function normalizePath($path) {
  * @return string|null Resolves to the config path or null.
  */
 function getConfigPath() {
-    $paths = isPhar() ? [substr(dirname(Phar::running(true)), strlen("phar://")) . "/acme-client.yml"] : [];
+    $paths = isPhar() ? [\substr(\dirname(Phar::running()), \strlen('phar://')) . '/acme-client.yml'] : [];
 
-    if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-        if ($home = getenv("HOME")) {
-            $paths[] = $home . "/.acme-client.yml";
+    if (0 !== stripos(PHP_OS, 'WIN')) {
+        if ($home = getenv('HOME')) {
+            $paths[] = $home . '/.acme-client.yml';
         }
 
-        $paths[] = "/etc/acme-client.yml";
+        $paths[] = '/etc/acme-client.yml';
     }
 
     do {
@@ -133,7 +150,7 @@ function getConfigPath() {
         if (file_exists($path)) {
             return $path;
         }
-    } while (count($paths));
+    } while (\count($paths));
 
     return null;
 }
@@ -142,11 +159,12 @@ function getConfigPath() {
  * Returns a consistent argument description for CLIMate. Valid arguments are "server" and "storage".
  *
  * @param string $argument argument name
+ *
  * @return array CLIMate argument description
  * @throws AcmeException if the provided acme-client.yml file is invalid
  * @throws ConfigException if the provided configuration file is invalid
  */
-function getArgumentDescription($argument) {
+function getArgumentDescription($argument): array {
     $config = [];
 
     if ($configPath = getConfigPath()) {
@@ -155,11 +173,11 @@ function getArgumentDescription($argument) {
         try {
             $config = Yaml::parse($configContent);
 
-            if (isset($config["server"]) && !is_string($config["server"])) {
+            if (isset($config['server']) && !\is_string($config['server'])) {
                 throw new ConfigException("'server' set, but not a string.");
             }
 
-            if (isset($config["storage"]) && !is_string($config["storage"])) {
+            if (isset($config['storage']) && !\is_string($config['storage'])) {
                 throw new ConfigException("'storage' set, but not a string.");
             }
         } catch (ParseException $e) {
@@ -168,41 +186,41 @@ function getArgumentDescription($argument) {
     }
 
     switch ($argument) {
-        case "server":
-            $argument = [
-                "prefix" => "s",
-                "longPrefix" => "server",
-                "description" => "ACME server to use for registration and issuance of certificates.",
-                "required" => true,
+        case 'server':
+            $desc = [
+                'prefix' => 's',
+                'longPrefix' => 'server',
+                'description' => 'ACME server to use for registration and issuance of certificates.',
+                'required' => true,
             ];
 
-            if (isset($config["server"])) {
-                $argument["required"] = false;
-                $argument["defaultValue"] = $config["server"];
+            if (isset($config['server'])) {
+                $desc['required'] = false;
+                $desc['defaultValue'] = $config['server'];
             }
 
-            return $argument;
+            return $desc;
 
-        case "storage":
+        case 'storage':
             $isPhar = isPhar();
 
-            $argument = [
-                "longPrefix" => "storage",
-                "description" => "Storage directory for account keys and certificates.",
-                "required" => $isPhar,
+            $desc = [
+                'longPrefix' => 'storage',
+                'description' => 'Storage directory for account keys and certificates.',
+                'required' => $isPhar,
             ];
 
             if (!$isPhar) {
-                $argument["defaultValue"] = dirname(__DIR__) . "/data";
-            } else if (isset($config["storage"])) {
-                $argument["required"] = false;
-                $argument["defaultValue"] = $config["storage"];
+                $desc['defaultValue'] = \dirname(__DIR__) . '/data';
+            } else if (isset($config['storage'])) {
+                $desc['required'] = false;
+                $desc['defaultValue'] = $config['storage'];
             }
 
-            return $argument;
+            return $desc;
 
         default:
-            throw new InvalidArgumentException("Unknown argument: " . $argument);
+            throw new InvalidArgumentException('Unknown argument: ' . $argument);
     }
 }
 
@@ -211,27 +229,27 @@ function getArgumentDescription($argument) {
  *
  * @return string binary callable, shortened based on PATH and CWD
  */
-function getBinary() {
-    $binary = "bin/acme";
+function getBinary(): string {
+    $binary = 'bin/acme';
 
     if (isPhar()) {
-        $binary = substr(Phar::running(true), strlen("phar://"));
+        $binary = substr(Phar::running(), \strlen('phar://'));
 
-        $path = getenv("PATH");
+        $path = getenv('PATH');
         $locations = explode(PATH_SEPARATOR, $path);
 
-        $binaryPath = dirname($binary);
+        $binaryPath = \dirname($binary);
 
         foreach ($locations as $location) {
             if ($location === $binaryPath) {
-                return substr($binary, strlen($binaryPath) + 1);
+                return substr($binary, \strlen($binaryPath) + 1);
             }
         }
 
         $cwd = getcwd();
 
         if ($cwd && strpos($binary, $cwd) === 0) {
-            $binary = "." . substr($binary, strlen($cwd));
+            $binary = '.' . substr($binary, \strlen($cwd));
         }
     }
 
@@ -244,18 +262,19 @@ function getBinary() {
  * @param string $text text to shorten
  * @param int    $max maximum length
  * @param string $append appendix when too long
+ *
  * @return string shortened string
  */
-function ellipsis($text, $max = 70, $append = "…") {
-    if (strlen($text) <= $max) {
+function ellipsis($text, $max = 70, $append = '…'): string {
+    if (\strlen($text) <= $max) {
         return $text;
     }
 
     $out = substr($text, 0, $max);
 
-    if (strpos($text, " ") === false) {
+    if (strpos($text, ' ') === false) {
         return $out . $append;
     }
 
-    return preg_replace("/\\w+$/", "", $out) . $append;
+    return preg_replace("/\\w+$/", '', $out) . $append;
 }

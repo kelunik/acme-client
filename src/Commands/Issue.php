@@ -2,13 +2,15 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
-use Amp\CoroutineResult;
-use Amp\Dns\Record;
-use Exception;
+use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
-use Kelunik\Acme\KeyPair;
-use Kelunik\Acme\OpenSSLKeyGenerator;
+use Kelunik\Acme\Crypto\Backend\OpensslBackend;
+use Kelunik\Acme\Crypto\PrivateKey;
+use Kelunik\Acme\Crypto\RsaKeyGenerator;
+use Kelunik\Acme\Csr\OpensslCsrGenerator;
+use Kelunik\Acme\Verifiers\Http01;
+use Kelunik\AcmeClient;
 use Kelunik\AcmeClient\AcmeFactory;
 use Kelunik\AcmeClient\Stores\CertificateStore;
 use Kelunik\AcmeClient\Stores\ChallengeStore;
@@ -16,8 +18,8 @@ use Kelunik\AcmeClient\Stores\KeyStore;
 use Kelunik\AcmeClient\Stores\KeyStoreException;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
-use stdClass;
-use Throwable;
+use function Amp\call;
+use function Kelunik\Acme\generateKeyAuthorization;
 
 class Issue implements Command {
     private $climate;
@@ -28,113 +30,104 @@ class Issue implements Command {
         $this->acmeFactory = $acmeFactory;
     }
 
-    public function execute(Manager $args) {
-        return \Amp\resolve($this->doExecute($args));
-    }
+    public function execute(Manager $args): Promise {
+        return call(function () use ($args) {
+            $user = null;
 
-    private function doExecute(Manager $args) {
-        if (strtoupper(substr(PHP_OS, 0, 3)) !== 'WIN') {
-            if (posix_geteuid() !== 0) {
-                $processUser = posix_getpwnam(posix_geteuid());
-                $currentUsername = $processUser["name"];
-                $user = $args->get("user") ?: $currentUsername;
+            if (0 !== stripos(PHP_OS, 'WIN')) {
+                if (posix_geteuid() !== 0) {
+                    $processUser = posix_getpwnam(posix_geteuid());
+                    $currentUsername = $processUser['name'];
+                    $user = $args->get('user') ?: $currentUsername;
 
-                if ($currentUsername !== $user) {
-                    throw new AcmeException("Running this script with --user only works as root!");
+                    if ($currentUsername !== $user) {
+                        throw new AcmeException('Running this script with --user only works as root!');
+                    }
+                } else {
+                    $user = $args->get('user') ?: 'www-data';
                 }
-            } else {
-                $user = $args->get("user") ?: "www-data";
-            }
-        }
-
-        $domains = array_map("trim", explode(":", str_replace([",", ";"], ":", $args->get("domains"))));
-        yield \Amp\resolve($this->checkDnsRecords($domains));
-
-        $docRoots = explode(PATH_SEPARATOR, str_replace("\\", "/", $args->get("path")));
-        $docRoots = array_map(function ($root) {
-            return rtrim($root, "/");
-        }, $docRoots);
-
-        if (count($domains) < count($docRoots)) {
-            throw new AcmeException("Specified more document roots than domains.");
-        }
-
-        if (count($domains) > count($docRoots)) {
-            $docRoots = array_merge(
-                $docRoots,
-                array_fill(count($docRoots), count($domains) - count($docRoots), end($docRoots))
-            );
-        }
-
-        $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get("storage")));
-
-        $server = \Kelunik\AcmeClient\resolveServer($args->get("server"));
-        $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
-
-        try {
-            $keyPair = (yield $keyStore->get("accounts/{$keyFile}.pem"));
-        } catch (KeyStoreException $e) {
-            throw new AcmeException("Account key not found, did you run 'bin/acme setup'?", 0, $e);
-        }
-
-        $this->climate->br();
-
-        $acme = $this->acmeFactory->build($server, $keyPair);
-        $errors = [];
-
-        $concurrency = $args->get("challenge-concurrency");
-
-        $domainChunks = array_chunk($domains, \min(20, \max($concurrency, 1)), true);
-
-        foreach ($domainChunks as $domainChunk) {
-            $promises = [];
-
-            foreach ($domainChunk as $i => $domain) {
-                $promises[] = \Amp\resolve($this->solveChallenge($acme, $keyPair, $domain, $docRoots[$i]));
             }
 
-            list($chunkErrors) = (yield \Amp\any($promises));
+            $domains = array_map('trim', explode(':', str_replace([',', ';'], ':', $args->get('domains'))));
+            yield from $this->checkDnsRecords($domains);
 
-            $errors += $chunkErrors;
-        }
+            $docRoots = explode(PATH_SEPARATOR, str_replace("\\", '/', $args->get('path')));
+            $docRoots = array_map(function ($root) {
+                return rtrim($root, '/');
+            }, $docRoots);
 
-        if (!empty($errors)) {
-            foreach ($errors as $error) {
-                $this->climate->error($error->getMessage());
+            if (\count($domains) < \count($docRoots)) {
+                throw new AcmeException('Specified more document roots than domains.');
             }
 
-            throw new AcmeException("Issuance failed, not all challenges could be solved.");
-        }
+            if (\count($domains) > \count($docRoots)) {
+                $docRoots = array_merge(
+                    $docRoots,
+                    array_fill(\count($docRoots), \count($domains) - \count($docRoots), end($docRoots))
+                );
+            }
 
-        $path = "certs/" . $keyFile . "/" . reset($domains) . "/key.pem";
-        $bits = $args->get("bits");
+            $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get('storage')));
 
-        try {
-            $keyPair = (yield $keyStore->get($path));
-        } catch (KeyStoreException $e) {
-            $keyPair = (new OpenSSLKeyGenerator)->generate($bits);
-            $keyPair = (yield $keyStore->put($path, $keyPair));
-        }
+            $server = \Kelunik\AcmeClient\resolveServer($args->get('server'));
+            $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
 
-        $this->climate->br();
-        $this->climate->whisper("    Requesting certificate ...");
+            try {
+                $key = yield $keyStore->get("accounts/{$keyFile}.pem");
+            } catch (KeyStoreException $e) {
+                throw new AcmeException("Account key not found, did you run 'bin/acme setup'?", 0, $e);
+            }
 
-        $location = (yield $acme->requestCertificate($keyPair, $domains));
-        $certificates = (yield $acme->pollForCertificate($location));
+            $this->climate->br();
 
-        $path = \Kelunik\AcmeClient\normalizePath($args->get("storage")) . "/certs/" . $keyFile;
-        $certificateStore = new CertificateStore($path);
-        yield $certificateStore->put($certificates);
+            $acme = $this->acmeFactory->build($server, $key);
+            $concurrency = \min(20, \max($args->get('challenge-concurrency'), 1));
 
-        $this->climate->info("    Successfully issued certificate.");
-        $this->climate->info("    See {$path}/" . reset($domains));
-        $this->climate->br();
+            /** @var \Throwable[] $errors */
+            list($errors) = yield AcmeClient\concurrentMap($concurrency, $domains, function ($domain, $i) use ($acme, $key, $docRoots, $user) {
+                return $this->solveChallenge($acme, $key, $domain, $docRoots[$i], $user);
+            });
 
-        yield new CoroutineResult(0);
+            if ($errors) {
+                foreach ($errors as $error) {
+                    $this->climate->error($error->getMessage());
+                }
+
+                throw new AcmeException('Issuance failed, not all challenges could be solved.');
+            }
+
+            $path = 'certs/' . $keyFile . '/' . reset($domains) . '/key.pem';
+            $bits = $args->get('bits');
+
+            try {
+                $key = yield $keyStore->get($path);
+            } catch (KeyStoreException $e) {
+                $key = (new RsaKeyGenerator($bits))->generateKey();
+                $key = yield $keyStore->put($path, $key);
+            }
+
+            $this->climate->br();
+            $this->climate->whisper('    Requesting certificate ...');
+
+            $csr = (new OpensslCsrGenerator)->generateCsr($key, $domains);
+
+            $location = yield $acme->requestCertificate($csr);
+            $certificates = yield $acme->pollForCertificate($location);
+
+            $path = AcmeClient\normalizePath($args->get('storage')) . '/certs/' . $keyFile;
+            $certificateStore = new CertificateStore($path);
+            yield $certificateStore->put($certificates);
+
+            $this->climate->info('    Successfully issued certificate.');
+            $this->climate->info("    See {$path}/" . reset($domains));
+            $this->climate->br();
+
+            return 0;
+        });
     }
 
-    private function solveChallenge(AcmeService $acme, KeyPair $keyPair, $domain, $path) {
-        list($location, $challenges) = (yield $acme->requestChallenges($domain));
+    private function solveChallenge(AcmeService $acme, PrivateKey $key, string $domain, string $path, string $user = null): \Generator {
+        list($location, $challenges) = yield $acme->requestChallenges($domain);
         $goodChallenges = $this->findSuitableCombination($challenges);
 
         if (empty($goodChallenges)) {
@@ -144,81 +137,57 @@ class Issue implements Command {
         $challenge = $challenges->challenges[reset($goodChallenges)];
         $token = $challenge->token;
 
-        if (!preg_match("#^[a-zA-Z0-9-_]+$#", $token)) {
-            throw new AcmeException("Protocol violation: Invalid Token!");
+        if (!preg_match('#^[a-zA-Z0-9-_]+$#', $token)) {
+            throw new AcmeException('Protocol violation: Invalid Token!');
         }
 
-        $payload = $acme->generateHttp01Payload($keyPair, $token);
+        $payload = generateKeyAuthorization($key, $token, new OpensslBackend);
 
         $this->climate->whisper("    Providing payload at http://{$domain}/.well-known/acme-challenge/{$token}");
 
         $challengeStore = new ChallengeStore($path);
 
         try {
-            yield $challengeStore->put($token, $payload, isset($user) ? $user : null);
+            yield $challengeStore->put($token, $payload, $user);
 
-            yield $acme->verifyHttp01Challenge($domain, $token, $payload);
+            yield (new Http01)->verifyChallenge($domain, $token, $payload);
             yield $acme->answerChallenge($challenge->uri, $payload);
             yield $acme->pollForChallenge($location);
 
             $this->climate->comment("    {$domain} is now authorized.");
-
+        } finally {
             yield $challengeStore->delete($token);
-        } catch (Exception $e) {
-            // no finally because generators...
-            yield $challengeStore->delete($token);
-            throw $e;
-        } catch (Throwable $e) {
-            // no finally because generators...
-            yield $challengeStore->delete($token);
-            throw $e;
         }
     }
 
-    private function checkDnsRecords($domains) {
-        $errors = [];
+    private function checkDnsRecords(array $domains): \Generator {
+        $promises = AcmeClient\concurrentMap(10, \array_combine($domains, $domains), 'Amp\Dns\resolve');
+        list($errors) = yield Promise\any($promises);
 
-        $domainChunks = array_chunk($domains, 10, true);
-
-        foreach ($domainChunks as $domainChunk) {
-            $promises = [];
-
-            foreach ($domainChunk as $domain) {
-                $promises[$domain] = \Amp\Dns\resolve($domain, [
-                    "types" => [Record::A, Record::AAAA],
-                    "hosts" => false,
-                ]);
-            }
-
-            list($chunkErrors) = (yield \Amp\any($promises));
-
-            $errors += $chunkErrors;
-        }
-
-        if (!empty($errors)) {
-            $failedDomains = implode(", ", array_keys($errors));
+        if ($errors) {
+            $failedDomains = implode(', ', array_keys($errors));
             $reasons = implode("\n\n", array_map(function ($exception) {
-                /** @var \Exception|\Throwable $exception */
-                return get_class($exception) . ": " . $exception->getMessage();
+                /** @var \Throwable $exception */
+                return \get_class($exception) . ': ' . $exception->getMessage();
             }, $errors));
 
             throw new AcmeException("Couldn't resolve the following domains to an IPv4 nor IPv6 record: {$failedDomains}\n\n{$reasons}");
         }
     }
 
-    private function findSuitableCombination(stdClass $response) {
-        $challenges = isset($response->challenges) ? $response->challenges : [];
-        $combinations = isset($response->combinations) ? $response->combinations : [];
+    private function findSuitableCombination(\stdClass $response): array {
+        $challenges = $response->challenges ?? [];
+        $combinations = $response->combinations ?? [];
         $goodChallenges = [];
 
         foreach ($challenges as $i => $challenge) {
-            if ($challenge->type === "http-01") {
+            if ($challenge->type === 'http-01') {
                 $goodChallenges[] = $i;
             }
         }
 
         foreach ($goodChallenges as $i => $challenge) {
-            if (!in_array([$challenge], $combinations)) {
+            if (!\in_array([$challenge], $combinations, true)) {
                 unset($goodChallenges[$i]);
             }
         }
@@ -226,38 +195,38 @@ class Issue implements Command {
         return $goodChallenges;
     }
 
-    public static function getDefinition() {
+    public static function getDefinition(): array {
         return [
-            "server" => \Kelunik\AcmeClient\getArgumentDescription("server"),
-            "storage" => \Kelunik\AcmeClient\getArgumentDescription("storage"),
-            "domains" => [
-                "prefix" => "d",
-                "longPrefix" => "domains",
-                "description" => "Colon / Semicolon / Comma separated list of domains to request a certificate for.",
-                "required" => true,
+            'server' => AcmeClient\getArgumentDescription('server'),
+            'storage' => AcmeClient\getArgumentDescription('storage'),
+            'domains' => [
+                'prefix' => 'd',
+                'longPrefix' => 'domains',
+                'description' => 'Colon / Semicolon / Comma separated list of domains to request a certificate for.',
+                'required' => true,
             ],
-            "path" => [
-                "prefix" => "p",
-                "longPrefix" => "path",
-                "description" => "Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.",
-                "required" => true,
+            'path' => [
+                'prefix' => 'p',
+                'longPrefix' => 'path',
+                'description' => 'Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.',
+                'required' => true,
             ],
-            "user" => [
-                "prefix" => "u",
-                "longPrefix" => "user",
-                "description" => "User running the web server.",
+            'user' => [
+                'prefix' => 'u',
+                'longPrefix' => 'user',
+                'description' => 'User running the web server.',
             ],
-            "bits" => [
-                "longPrefix" => "bits",
-                "description" => "Length of the private key in bit.",
-                "defaultValue" => 2048,
-                "castTo" => "int",
+            'bits' => [
+                'longPrefix' => 'bits',
+                'description' => 'Length of the private key in bit.',
+                'defaultValue' => 2048,
+                'castTo' => 'int',
             ],
-            "challenge-concurrency" => [
-                "longPrefix" => "challenge-concurrency",
-                "description" => "Number of challenges to be solved concurrently.",
-                "defaultValue" => 10,
-                "castTo" => "int",
+            'challenge-concurrency' => [
+                'longPrefix' => 'challenge-concurrency',
+                'description' => 'Number of challenges to be solved concurrently.',
+                'defaultValue' => 10,
+                'castTo' => 'int',
             ],
         ];
     }
