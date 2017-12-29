@@ -10,7 +10,7 @@ class ChallengeStore {
     private $docroot;
 
     public function __construct(string $docroot) {
-        $this->docroot = rtrim(str_replace("\\", '/', $docroot), '/');
+        $this->docroot = \rtrim(\str_replace("\\", '/', $docroot), '/');
     }
 
     public function put(string $token, string $payload, string $user = null): Promise {
@@ -26,7 +26,7 @@ class ChallengeStore {
                 throw new ChallengeStoreException("Couldn't create key directory: '{$path}'");
             }
 
-            if ($user && !$userInfo = posix_getpwnam($user)) {
+            if ($user && !$userInfo = \posix_getpwnam($user)) {
                 throw new ChallengeStoreException("Unknown user: '{$user}'");
             }
 

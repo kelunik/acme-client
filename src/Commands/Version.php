@@ -17,16 +17,16 @@ class Version implements Command {
     public function execute(Manager $args): Promise {
         $version = $this->getVersion();
 
-        $buildTime = $this->readFileOr('info/build.time', time());
-        $buildDate = date('M jS Y H:i:s T', (int) trim($buildTime));
+        $buildTime = $this->readFileOr('info/build.time', \time());
+        $buildDate = \date('M jS Y H:i:s T', (int) \trim($buildTime));
 
-        $package = json_decode($this->readFileOr('composer.json', new \Exception('No composer.json found.')));
+        $package = \json_decode($this->readFileOr('composer.json', new \Exception('No composer.json found.')));
 
         $this->climate->out("┌ <green>kelunik/acme-client</green> @ <yellow>{$version}</yellow> (built: {$buildDate})");
         $this->climate->out(($args->defined('deps') ? '│' : '└') . ' ' . $this->getDescription($package));
 
         if ($args->defined('deps')) {
-            $lockFile = json_decode($this->readFileOr('composer.lock', new \Exception('No composer.lock found.')));
+            $lockFile = \json_decode($this->readFileOr('composer.lock', new \Exception('No composer.lock found.')));
             $packages = $lockFile->packages;
 
             for ($i = 0, $count = \count($packages); $i < $count; $i++) {
@@ -46,18 +46,18 @@ class Version implements Command {
     }
 
     private function getVersion() {
-        if (file_exists(__DIR__ . '/../../.git')) {
+        if (\file_exists(__DIR__ . '/../../.git')) {
             $version = `git describe --tags`;
         } else {
             $version = $this->readFileOr('info/build.version', '-unknown');
         }
 
-        return substr(trim($version), 1);
+        return \substr(\trim($version), 1);
     }
 
     private function readFileOr($file, $default = '') {
-        if (file_exists(__DIR__ . '/../../' . $file)) {
-            return file_get_contents(__DIR__ . '/../../' . $file);
+        if (\file_exists(__DIR__ . '/../../' . $file)) {
+            return \file_get_contents(__DIR__ . '/../../' . $file);
         }
 
         if ($default instanceof \Throwable) {

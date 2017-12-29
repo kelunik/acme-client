@@ -24,7 +24,7 @@ function concurrentMap(int $concurrency, array $values, callable $functor): arra
         } finally {
             $lock->release();
         }
-    }), $values, array_keys($values));
+    }), $values, \array_keys($values));
 }
 
 /**
@@ -37,14 +37,14 @@ function concurrentMap(int $concurrency, array $values, callable $functor): arra
  * @return string suggestion or empty string if no command is similar enough
  */
 function suggestCommand(string $badCommand, array $commands, int $suggestThreshold = 70): string {
-    $badCommand = strtolower($badCommand);
+    $badCommand = \strtolower($badCommand);
 
     $bestMatch = '';
     $bestMatchPercentage = 0;
     $byRefPercentage = 0;
 
     foreach ($commands as $command) {
-        \similar_text($badCommand, strtolower($command), $byRefPercentage);
+        \similar_text($badCommand, \strtolower($command), $byRefPercentage);
 
         if ($byRefPercentage > $bestMatchPercentage) {
             $bestMatchPercentage = $byRefPercentage;
@@ -74,11 +74,11 @@ function resolveServer(string $uri): string {
         return $shortcuts[$uri];
     }
 
-    if (strpos($uri, '/') === false) {
+    if (\strpos($uri, '/') === false) {
         throw new InvalidArgumentException('Invalid server URI: ' . $uri);
     }
 
-    $protocol = substr($uri, 0, strpos($uri, '://'));
+    $protocol = \substr($uri, 0, \strpos($uri, '://'));
 
     if (!$protocol || $protocol === $uri) {
         return "https://{$uri}";
@@ -95,11 +95,11 @@ function resolveServer(string $uri): string {
  * @return string identifier usable as file name
  */
 function serverToKeyname(string $server): string {
-    $server = substr($server, strpos($server, '://') + 3);
+    $server = \substr($server, \strpos($server, '://') + 3);
 
-    $keyFile = str_replace('/', '.', $server);
-    $keyFile = preg_replace('@[^a-z0-9._-]@', '', $keyFile);
-    $keyFile = preg_replace("@\\.+@", '.', $keyFile);
+    $keyFile = \str_replace('/', '.', $server);
+    $keyFile = \preg_replace('@[^a-z0-9._-]@', '', $keyFile);
+    $keyFile = \preg_replace("@\\.+@", '.', $keyFile);
 
     return $keyFile;
 }
@@ -110,7 +110,7 @@ function serverToKeyname(string $server): string {
  * @return bool {@code true} if running as Phar, {@code false} otherwise
  */
 function isPhar(): bool {
-    if (!class_exists('Phar')) {
+    if (!\class_exists('Phar')) {
         return false;
     }
 
@@ -125,7 +125,7 @@ function isPhar(): bool {
  * @return string normalized path
  */
 function normalizePath(string $path): string {
-    return rtrim(str_replace("\\", '/', $path), '/');
+    return \rtrim(\str_replace("\\", '/', $path), '/');
 }
 
 /**
@@ -136,8 +136,8 @@ function normalizePath(string $path): string {
 function getConfigPath() {
     $paths = isPhar() ? [\substr(\dirname(Phar::running()), \strlen('phar://')) . '/acme-client.yml'] : [];
 
-    if (0 !== stripos(PHP_OS, 'WIN')) {
-        if ($home = getenv('HOME')) {
+    if (0 !== \stripos(PHP_OS, 'WIN')) {
+        if ($home = \getenv('HOME')) {
             $paths[] = $home . '/.acme-client.yml';
         }
 
@@ -145,9 +145,9 @@ function getConfigPath() {
     }
 
     do {
-        $path = array_shift($paths);
+        $path = \array_shift($paths);
 
-        if (file_exists($path)) {
+        if (\file_exists($path)) {
             return $path;
         }
     } while (\count($paths));
@@ -168,7 +168,7 @@ function getArgumentDescription($argument): array {
     $config = [];
 
     if ($configPath = getConfigPath()) {
-        $configContent = file_get_contents($configPath);
+        $configContent = \file_get_contents($configPath);
 
         try {
             $config = Yaml::parse($configContent);
@@ -212,7 +212,7 @@ function getArgumentDescription($argument): array {
 
             if (!$isPhar) {
                 $desc['defaultValue'] = \dirname(__DIR__) . '/data';
-            } else if (isset($config['storage'])) {
+            } elseif (isset($config['storage'])) {
                 $desc['required'] = false;
                 $desc['defaultValue'] = $config['storage'];
             }
@@ -233,23 +233,23 @@ function getBinary(): string {
     $binary = 'bin/acme';
 
     if (isPhar()) {
-        $binary = substr(Phar::running(), \strlen('phar://'));
+        $binary = \substr(Phar::running(), \strlen('phar://'));
 
-        $path = getenv('PATH');
-        $locations = explode(PATH_SEPARATOR, $path);
+        $path = \getenv('PATH');
+        $locations = \explode(PATH_SEPARATOR, $path);
 
         $binaryPath = \dirname($binary);
 
         foreach ($locations as $location) {
             if ($location === $binaryPath) {
-                return substr($binary, \strlen($binaryPath) + 1);
+                return \substr($binary, \strlen($binaryPath) + 1);
             }
         }
 
-        $cwd = getcwd();
+        $cwd = \getcwd();
 
-        if ($cwd && strpos($binary, $cwd) === 0) {
-            $binary = '.' . substr($binary, \strlen($cwd));
+        if ($cwd && \strpos($binary, $cwd) === 0) {
+            $binary = '.' . \substr($binary, \strlen($cwd));
         }
     }
 
@@ -270,11 +270,11 @@ function ellipsis($text, $max = 70, $append = '…'): string {
         return $text;
     }
 
-    $out = substr($text, 0, $max);
+    $out = \substr($text, 0, $max);
 
-    if (strpos($text, ' ') === false) {
+    if (\strpos($text, ' ') === false) {
         return $out . $append;
     }
 
-    return preg_replace("/\\w+$/", '', $out) . $append;
+    return \preg_replace("/\\w+$/", '', $out) . $append;
 }

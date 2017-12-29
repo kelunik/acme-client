@@ -37,20 +37,20 @@ class Check implements Command {
             $cert = new Certificate($pem);
 
             $this->climate->br();
-            $this->climate->whisper('    Certificate is valid until ' . date('d.m.Y', $cert->getValidTo()))->br();
+            $this->climate->whisper('    Certificate is valid until ' . \date('d.m.Y', $cert->getValidTo()))->br();
 
             if ($args->defined('names')) {
-                $names = array_map('trim', explode(',', $args->get('names')));
-                $missingNames = array_diff($names, $cert->getNames());
+                $names = \array_map('trim', \explode(',', $args->get('names')));
+                $missingNames = \array_diff($names, $cert->getNames());
 
                 if ($missingNames) {
-                    $this->climate->comment('    The following names are not covered: ' . implode(', ', $missingNames))->br();
+                    $this->climate->comment('    The following names are not covered: ' . \implode(', ', $missingNames))->br();
 
                     return 1;
                 }
             }
 
-            if ($cert->getValidTo() > time() + $args->get('ttl') * 24 * 60 * 60) {
+            if ($cert->getValidTo() > \time() + $args->get('ttl') * 24 * 60 * 60) {
                 return 0;
             }
 

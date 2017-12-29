@@ -3,3 +3,4 @@
 /info/
 /vendor/
 /config.test.yml
+/.php_cs.cache

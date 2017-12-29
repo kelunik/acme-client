@@ -34,9 +34,9 @@ class Issue implements Command {
         return call(function () use ($args) {
             $user = null;
 
-            if (0 !== stripos(PHP_OS, 'WIN')) {
-                if (posix_geteuid() !== 0) {
-                    $processUser = posix_getpwnam(posix_geteuid());
+            if (0 !== \stripos(PHP_OS, 'WIN')) {
+                if (\posix_geteuid() !== 0) {
+                    $processUser = \posix_getpwnam(\posix_geteuid());
                     $currentUsername = $processUser['name'];
                     $user = $args->get('user') ?: $currentUsername;
 
@@ -48,12 +48,12 @@ class Issue implements Command {
                 }
             }
 
-            $domains = array_map('trim', explode(':', str_replace([',', ';'], ':', $args->get('domains'))));
+            $domains = \array_map('trim', \explode(':', \str_replace([',', ';'], ':', $args->get('domains'))));
             yield from $this->checkDnsRecords($domains);
 
-            $docRoots = explode(PATH_SEPARATOR, str_replace("\\", '/', $args->get('path')));
-            $docRoots = array_map(function ($root) {
-                return rtrim($root, '/');
+            $docRoots = \explode(PATH_SEPARATOR, \str_replace("\\", '/', $args->get('path')));
+            $docRoots = \array_map(function ($root) {
+                return \rtrim($root, '/');
             }, $docRoots);
 
             if (\count($domains) < \count($docRoots)) {
@@ -61,9 +61,9 @@ class Issue implements Command {
             }
 
             if (\count($domains) > \count($docRoots)) {
-                $docRoots = array_merge(
+                $docRoots = \array_merge(
                     $docRoots,
-                    array_fill(\count($docRoots), \count($domains) - \count($docRoots), end($docRoots))
+                    \array_fill(\count($docRoots), \count($domains) - \count($docRoots), \end($docRoots))
                 );
             }
 
@@ -96,7 +96,7 @@ class Issue implements Command {
                 throw new AcmeException('Issuance failed, not all challenges could be solved.');
             }
 
-            $path = 'certs/' . $keyFile . '/' . reset($domains) . '/key.pem';
+            $path = 'certs/' . $keyFile . '/' . \reset($domains) . '/key.pem';
             $bits = $args->get('bits');
 
             try {
@@ -119,7 +119,7 @@ class Issue implements Command {
             yield $certificateStore->put($certificates);
 
             $this->climate->info('    Successfully issued certificate.');
-            $this->climate->info("    See {$path}/" . reset($domains));
+            $this->climate->info("    See {$path}/" . \reset($domains));
             $this->climate->br();
 
             return 0;
@@ -134,10 +134,10 @@ class Issue implements Command {
             throw new AcmeException("Couldn't find any combination of challenges which this client can solve!");
         }
 
-        $challenge = $challenges->challenges[reset($goodChallenges)];
+        $challenge = $challenges->challenges[\reset($goodChallenges)];
         $token = $challenge->token;
 
-        if (!preg_match('#^[a-zA-Z0-9-_]+$#', $token)) {
+        if (!\preg_match('#^[a-zA-Z0-9-_]+$#', $token)) {
             throw new AcmeException('Protocol violation: Invalid Token!');
         }
 
@@ -165,8 +165,8 @@ class Issue implements Command {
         list($errors) = yield Promise\any($promises);
 
         if ($errors) {
-            $failedDomains = implode(', ', array_keys($errors));
-            $reasons = implode("\n\n", array_map(function ($exception) {
+            $failedDomains = \implode(', ', \array_keys($errors));
+            $reasons = \implode("\n\n", \array_map(function ($exception) {
                 /** @var \Throwable $exception */
                 return \get_class($exception) . ': ' . $exception->getMessage();
             }, $errors));

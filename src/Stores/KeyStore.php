@@ -12,7 +12,7 @@ class KeyStore {
     private $root;
 
     public function __construct(string $root = '') {
-        $this->root = rtrim(str_replace("\\", '/', $root), '/');
+        $this->root = \rtrim(\str_replace("\\", '/', $root), '/');
     }
 
     public function get(string $path): Promise {
@@ -21,7 +21,7 @@ class KeyStore {
             $privateKey = yield File\get($file);
 
             // Check key here to be valid, PrivateKey doesn't do that, we fail early here
-            $res = openssl_pkey_get_private($privateKey);
+            $res = \openssl_pkey_get_private($privateKey);
 
             if ($res === false) {
                 throw new KeyStoreException("Invalid private key: '{$file}'");

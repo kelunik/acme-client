@@ -57,11 +57,11 @@ class Setup implements Command {
 
             $acme = $this->acmeFactory->build($server, $keyPair);
 
-            $this->climate->whisper('    Registering with ' . substr($server, 8) . ' ...');
+            $this->climate->whisper('    Registering with ' . \substr($server, 8) . ' ...');
 
             /** @var Registration $registration */
             $registration = yield $acme->register($email);
-            $this->climate->info('    Registration successful. Contacts: ' . implode(', ', $registration->getContact()));
+            $this->climate->info('    Registration successful. Contacts: ' . \implode(', ', $registration->getContact()));
             $this->climate->br();
 
             return 0;
@@ -69,7 +69,7 @@ class Setup implements Command {
     }
 
     private function checkEmail(string $email) {
-        $host = substr($email, strrpos($email, '@') + 1);
+        $host = \substr($email, \strrpos($email, '@') + 1);
 
         if (!$host) {
             throw new AcmeException("Invalid contact email: '{$email}'");
@@ -98,7 +98,7 @@ class Setup implements Command {
         $configPath = AcmeClient\getConfigPath();
 
         if ($configPath) {
-            $config = Yaml::parse(file_get_contents($configPath));
+            $config = Yaml::parse(\file_get_contents($configPath));
 
             if (isset($config['email']) && \is_string($config['email'])) {
                 $args['email']['required'] = false;

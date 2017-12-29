@@ -50,13 +50,13 @@ class Status {
                     $pem = yield $certificateStore->get($domain);
                     $cert = new Certificate($pem);
 
-                    $symbol = time() > $cert->getValidTo() ? '<red> ✗ </red>' : '<green> ✓ </green>';
+                    $symbol = \time() > $cert->getValidTo() ? '<red> ✗ </red>' : '<green> ✓ </green>';
 
-                    if (time() < $cert->getValidTo() && time() + $args->get('ttl') * 24 * 60 * 60 > $cert->getValidTo()) {
+                    if (\time() < $cert->getValidTo() && \time() + $args->get('ttl') * 24 * 60 * 60 > $cert->getValidTo()) {
                         $symbol = '<yellow> ⭮ </yellow>';
                     }
 
-                    $this->climate->out('  [' . $symbol . '] ' . implode(', ', $cert->getNames()));
+                    $this->climate->out('  [' . $symbol . '] ' . \implode(', ', $cert->getNames()));
                 }
 
                 $this->climate->br();

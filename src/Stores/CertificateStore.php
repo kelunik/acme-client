@@ -13,7 +13,7 @@ class CertificateStore {
     private $root;
 
     public function __construct(string $root) {
-        $this->root = rtrim(str_replace("\\", '/', $root), '/');
+        $this->root = \rtrim(\str_replace("\\", '/', $root), '/');
     }
 
     public function get(string $name): Promise {
@@ -54,10 +54,10 @@ class CertificateStore {
                 yield File\put($path . '/cert.pem', $certificates[0]);
                 yield File\chmod($path . '/cert.pem', 0644);
 
-                yield File\put($path . '/fullchain.pem', implode("\n", $certificates));
+                yield File\put($path . '/fullchain.pem', \implode("\n", $certificates));
                 yield File\chmod($path . '/fullchain.pem', 0644);
 
-                yield File\put($path . '/chain.pem', implode("\n", $chain));
+                yield File\put($path . '/chain.pem', \implode("\n", $chain));
                 yield File\chmod($path . '/chain.pem', 0644);
             } catch (FilesystemException $e) {
                 throw new CertificateStoreException("Couldn't save certificates for '{$commonName}'", 0, $e);

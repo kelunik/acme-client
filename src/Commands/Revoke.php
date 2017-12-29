@@ -45,13 +45,13 @@ class Revoke implements Command {
                 throw new \RuntimeException("There's no such certificate (" . $path . ')');
             }
 
-            if ($cert->getValidTo() < time()) {
+            if ($cert->getValidTo() < \time()) {
                 $this->climate->comment('    Certificate did already expire, no need to revoke it.');
             }
 
             $names = $cert->getNames();
             $this->climate->whisper('    Certificate was valid for ' . \count($names) . ' domains.');
-            $this->climate->whisper('     - ' . implode(PHP_EOL . '     - ', $names) . PHP_EOL);
+            $this->climate->whisper('     - ' . \implode(PHP_EOL . '     - ', $names) . PHP_EOL);
 
             yield $acme->revokeCertificate($pem);
 

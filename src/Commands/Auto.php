@@ -51,13 +51,13 @@ class Auto implements Command {
 
             if ($args->defined('server')) {
                 $config['server'] = $args->get('server');
-            } else if (!isset($config['server']) && $args->exists('server')) {
+            } elseif (!isset($config['server']) && $args->exists('server')) {
                 $config['server'] = $args->get('server');
             }
 
             if ($args->defined('storage')) {
                 $config['storage'] = $args->get('storage');
-            } else if (!isset($config['storage']) && $args->exists('storage')) {
+            } elseif (!isset($config['storage']) && $args->exists('storage')) {
                 $config['storage'] = $args->get('storage');
             }
 
@@ -81,7 +81,7 @@ class Auto implements Command {
                 return self::EXIT_CONFIG_ERROR;
             }
 
-            if (isset($config['challenge-concurrency']) && !is_numeric($config['challenge-concurrency'])) {
+            if (isset($config['challenge-concurrency']) && !\is_numeric($config['challenge-concurrency'])) {
                 $this->climate->error("Config file ({$configPath}) defines an invalid 'challenge-concurrency' value.");
                 return self::EXIT_CONFIG_ERROR;
             }
@@ -140,7 +140,7 @@ class Auto implements Command {
                 foreach ($values as $i => $value) {
                     if ($value === self::STATUS_RENEWED) {
                         $certificate = $config['certificates'][$i];
-                        $this->climate->info('Certificate for ' . implode(', ', array_keys($this->toDomainPathMap($certificate['paths']))) . ' successfully renewed.');
+                        $this->climate->info('Certificate for ' . \implode(', ', \array_keys($this->toDomainPathMap($certificate['paths']))) . ' successfully renewed.');
                     }
                 }
             }
@@ -148,7 +148,7 @@ class Auto implements Command {
             if ($status['failure'] > 0) {
                 foreach ($errors as $i => $error) {
                     $certificate = $config['certificates'][$i];
-                    $this->climate->error('Issuance for the following domains failed: ' . implode(', ', array_keys($this->toDomainPathMap($certificate['paths']))));
+                    $this->climate->error('Issuance for the following domains failed: ' . \implode(', ', \array_keys($this->toDomainPathMap($certificate['paths']))));
                     $this->climate->error("Reason: {$error}");
                 }
 
@@ -177,8 +177,8 @@ class Auto implements Command {
      */
     private function checkAndIssue(array $certificate, string $server, string $storage, int $concurrency = null): \Generator {
         $domainPathMap = $this->toDomainPathMap($certificate['paths']);
-        $domains = array_keys($domainPathMap);
-        $commonName = reset($domains);
+        $domains = \array_keys($domainPathMap);
+        $commonName = \reset($domains);
 
         $process = new Process([
             PHP_BINARY,
@@ -191,7 +191,7 @@ class Auto implements Command {
             '--name',
             $commonName,
             '--names',
-            implode(',', $domains),
+            \implode(',', $domains),
         ]);
 
         $process->start();
@@ -213,9 +213,9 @@ class Auto implements Command {
                 '--storage',
                 $storage,
                 '--domains',
-                implode(',', $domains),
+                \implode(',', $domains),
                 '--path',
-                implode(PATH_SEPARATOR, array_values($domainPathMap)),
+                \implode(PATH_SEPARATOR, \array_values($domainPathMap)),
             ];
 
             if (isset($certificate['user'])) {
@@ -253,7 +253,7 @@ class Auto implements Command {
         $result = [];
 
         foreach ($paths as $path => $domains) {
-            if (is_numeric($path)) {
+            if (\is_numeric($path)) {
                 $message = <<<MESSAGE
 Your configuration has the wrong format. Received a numeric value as path name.
 
