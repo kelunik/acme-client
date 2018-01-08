@@ -46,13 +46,17 @@
             "compression": "GZip",
             "name": "acme-client.phar",
             "output-dir": "build",
-            "include": ["info", "src", "vendor/kelunik/acme/res", "vendor/amphp/socket/var"],
+            "include": ["info", "src", "vendor/kelunik/acme/res"],
+            "include-dev": false,
+            "skip-shebang": false,
             "entry-point": "bin/acme",
             "events": {
                 "command.package.start": [
                     "mkdir -p info",
                     "git describe --tags > info/build.version",
-                    "php -r 'echo time();' > info/build.time"
+                    "php -r 'echo time();' > info/build.time",
+                    "rm -rf vendor/amphp/file/travis",
+                    "rm -rf vendor/amphp/parallel/travis"
                 ],
                 "command.package.end": [
                     "rm -rf info",
