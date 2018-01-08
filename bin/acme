@@ -1,10 +1,12 @@
 #!/usr/bin/env php
 <?php
 
+use Amp\File\BlockingDriver;
 use Amp\Loop;
 use Auryn\Injector;
 use Kelunik\AcmeClient\AcmeFactory;
 use League\CLImate\CLImate;
+use function Amp\File\filesystem;
 
 $logo = <<<LOGO
     ____ __________ ___  ___
@@ -104,6 +106,9 @@ if (!array_key_exists($argv[1], $commands)) {
 
     exit(1);
 }
+
+// Use blocking driver for now, as amphp/parallel doesn't work inside PHARs
+filesystem(new BlockingDriver);
 
 /** @var \Kelunik\AcmeClient\Commands\Command $class */
 $class = "Kelunik\\AcmeClient\\Commands\\" . ucfirst($argv[1]);
