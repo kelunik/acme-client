@@ -41,6 +41,11 @@
             "src/functions.php"
         ]
     },
+    "config": {
+        "platform": {
+            "php": "7.0.0"
+        }
+    },
     "extra": {
         "phar-builder": {
             "compression": "GZip",
