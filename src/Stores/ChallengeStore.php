@@ -22,8 +22,12 @@ class ChallengeStore {
                 throw new ChallengeStoreException("Document root doesn't exist: '{$this->docroot}'");
             }
 
-            if (!(yield File\isdir($path)) && !(yield File\mkdir($path, 0644, true)) && !(yield File\isdir($path))) {
-                throw new ChallengeStoreException("Couldn't create key directory: '{$path}'");
+            if (!yield File\isdir($path)) {
+                yield File\mkdir($path, 0644, true);
+
+                if (!yield File\isdir($path)) {
+                    throw new ChallengeStoreException("Couldn't create key directory: '{$path}'");
+                }
             }
 
             if ($user && !$userInfo = \posix_getpwnam($user)) {

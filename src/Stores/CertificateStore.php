@@ -47,8 +47,12 @@ class CertificateStore {
                 $chain = \array_slice($certificates, 1);
                 $path = $this->root . '/' . $commonName;
 
-                if (!(yield File\isdir($path)) && !(yield File\mkdir($path, 0644, true)) && !(yield File\isdir($path))) {
-                    throw new FilesystemException("Couldn't create certificate directory: '{$path}'");
+                if (!yield File\isdir($path)) {
+                    yield File\mkdir($path, 0644, true);
+
+                    if (!yield File\isdir($path)) {
+                        throw new FilesystemException("Couldn't create certificate directory: '{$path}'");
+                    }
                 }
 
                 yield File\put($path . '/cert.pem', $certificates[0]);

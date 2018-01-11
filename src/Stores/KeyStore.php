@@ -43,8 +43,12 @@ class KeyStore {
             try {
                 $dir = \dirname($file);
 
-                if (!(yield File\isdir($dir)) && !(yield File\mkdir($dir, 0644, true)) && !(yield File\isdir($dir))) {
-                    throw new FilesystemException("Couldn't create key directory: '{$dir}'");
+                if (!yield File\isdir($dir)) {
+                    yield File\mkdir($dir, 0644, true);
+
+                    if (!yield File\isdir($dir)) {
+                        throw new FilesystemException("Couldn't create key directory: '{$dir}'");
+                    }
                 }
 
                 yield File\put($file, $key->toPem());
