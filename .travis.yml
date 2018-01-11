@@ -20,7 +20,7 @@ install:
 script:
   - find -name "*.php" -not -path "./vendor/*" -print0 | xargs -n 1 -0 php -l
   - phpdbg -qrr vendor/bin/phpunit --coverage-text --coverage-clover build/logs/clover.xml
-  - php vendor/bin/php-cs-fixer --diff --dry-run -v fix
+  - PHP_CS_FIXER_IGNORE_ENV=1 php vendor/bin/php-cs-fixer --diff --dry-run -v fix
 
 after_script:
   - php vendor/bin/coveralls -v
