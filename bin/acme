@@ -144,8 +144,9 @@ $injector->share(new AcmeFactory);
 $injector->share(new Amp\Artax\DefaultClient);
 
 $command = $injector->make($class);
+$exitCode = 1;
 
-Loop::run(function () use ($command, $climate) {
+Loop::run(function () use ($command, $climate, &$exitCode) {
     $handler = function ($e) use ($climate) {
         $error = (string) $e;
         $lines = explode("\n", $error);
@@ -164,13 +165,13 @@ Loop::run(function () use ($command, $climate) {
         $exitCode = yield $command->execute($climate->arguments);
 
         if ($exitCode === null) {
-            exit(0);
+            $exitCode = 0;
         }
-
-        exit($exitCode);
     } catch (Throwable $e) {
         $handler($e);
     }
 
     Loop::stop();
 });
+
+exit($exitCode);
