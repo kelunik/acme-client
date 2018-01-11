@@ -2,6 +2,7 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
+use Amp\Dns;
 use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\AcmeService;
@@ -161,7 +162,10 @@ class Issue implements Command {
     }
 
     private function checkDnsRecords(array $domains): \Generator {
-        $promises = AcmeClient\concurrentMap(10, \array_combine($domains, $domains), 'Amp\Dns\resolve');
+        $promises = AcmeClient\concurrentMap(10, $domains, function (string $domain): Promise {
+            return Dns\resolve($domain);
+        });
+
         list($errors) = yield Promise\any($promises);
 
         if ($errors) {
