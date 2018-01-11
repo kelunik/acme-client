@@ -44,7 +44,7 @@ class KeyStore {
                 $dir = \dirname($file);
 
                 if (!yield File\isdir($dir)) {
-                    yield File\mkdir($dir, 0644, true);
+                    yield File\mkdir($dir, 0755, true);
 
                     if (!yield File\isdir($dir)) {
                         throw new FilesystemException("Couldn't create key directory: '{$dir}'");

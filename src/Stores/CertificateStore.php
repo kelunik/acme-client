@@ -48,7 +48,7 @@ class CertificateStore {
                 $path = $this->root . '/' . $commonName;
 
                 if (!yield File\isdir($path)) {
-                    yield File\mkdir($path, 0644, true);
+                    yield File\mkdir($path, 0755, true);
 
                     if (!yield File\isdir($path)) {
                         throw new FilesystemException("Couldn't create certificate directory: '{$path}'");
