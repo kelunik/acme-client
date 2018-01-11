@@ -110,7 +110,7 @@ class Issue implements Command {
             $this->climate->br();
             $this->climate->whisper('    Requesting certificate ...');
 
-            $csr = (new OpensslCsrGenerator)->generateCsr($key, $domains);
+            $csr = yield (new OpensslCsrGenerator)->generateCsr($key, $domains);
 
             $location = yield $acme->requestCertificate($csr);
             $certificates = yield $acme->pollForCertificate($location);
