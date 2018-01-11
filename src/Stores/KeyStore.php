@@ -18,16 +18,21 @@ class KeyStore {
     public function get(string $path): Promise {
         return call(function () use ($path) {
             $file = $this->root . '/' . $path;
-            $privateKey = yield File\get($file);
 
-            // Check key here to be valid, PrivateKey doesn't do that, we fail early here
-            $res = \openssl_pkey_get_private($privateKey);
+            try {
+                $privateKey = yield File\get($file);
 
-            if ($res === false) {
-                throw new KeyStoreException("Invalid private key: '{$file}'");
+                // Check key here to be valid, PrivateKey doesn't do that, we fail early here
+                $res = \openssl_pkey_get_private($privateKey);
+
+                if ($res === false) {
+                    throw new KeyStoreException("Invalid private key: '{$file}'");
+                }
+
+                return new PrivateKey($privateKey);
+            } catch (FilesystemException $e) {
+                throw new KeyStoreException("Key not found: '{$file}'");
             }
-
-            return new PrivateKey($privateKey);
         });
     }
 
@@ -38,7 +43,7 @@ class KeyStore {
             try {
                 $dir = \dirname($file);
 
-                if (!yield File\isdir($dir) && !yield File\mkdir($dir, 0644, true) && !yield File\isdir($dir)) {
+                if (!(yield File\isdir($dir)) && !(yield File\mkdir($dir, 0644, true)) && !(yield File\isdir($dir))) {
                     throw new FilesystemException("Couldn't create key directory: '{$path}'");
                 }
 

@@ -22,7 +22,7 @@ class ChallengeStore {
                 throw new ChallengeStoreException("Document root doesn't exist: '{$this->docroot}'");
             }
 
-            if (!yield File\isdir($path) && !yield File\mkdir($path, 0644, true) && !yield File\isdir($path)) {
+            if (!(yield File\isdir($path)) && !(yield File\mkdir($path, 0644, true)) && !(yield File\isdir($path))) {
                 throw new ChallengeStoreException("Couldn't create key directory: '{$path}'");
             }
 
@@ -35,13 +35,13 @@ class ChallengeStore {
                 yield File\chown($this->docroot . '/.well-known/acme-challenge', $userInfo['uid'], -1);
             }
 
-            yield \Amp\File\put("{$path}/{$token}", $payload);
+            yield File\put("{$path}/{$token}", $payload);
 
             if ($userInfo !== null) {
-                yield \Amp\File\chown("{$path}/{$token}", $userInfo['uid'], -1);
+                yield File\chown("{$path}/{$token}", $userInfo['uid'], -1);
             }
 
-            yield \Amp\File\chmod("{$path}/{$token}", 0644);
+            yield File\chmod("{$path}/{$token}", 0644);
         });
     }
 
@@ -50,7 +50,7 @@ class ChallengeStore {
             $path = $this->docroot . "/.well-known/acme-challenge/{$token}";
 
             if (yield File\exists($path)) {
-                yield \Amp\File\unlink($path);
+                yield File\unlink($path);
             }
         });
     }
