@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "4332d77ce602e20b8ab72bdce75be8f8",
+    "content-hash": "dfce16af4260296c6ecf258e5b7e57b1",
     "packages": [
         {
             "name": "amphp/amp",
@@ -390,16 +390,16 @@
         },
         {
             "name": "amphp/parallel",
-            "version": "v0.2.4",
+            "version": "v0.2.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/parallel.git",
-                "reference": "ed3662172d2c06f10d40745354928d943ff6eb7c"
+                "reference": "732694688461936bec02c0ccf020dfee10c4f7ee"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/parallel/zipball/ed3662172d2c06f10d40745354928d943ff6eb7c",
-                "reference": "ed3662172d2c06f10d40745354928d943ff6eb7c",
+                "url": "https://api.github.com/repos/amphp/parallel/zipball/732694688461936bec02c0ccf020dfee10c4f7ee",
+                "reference": "732694688461936bec02c0ccf020dfee10c4f7ee",
                 "shasum": ""
             },
             "require": {
@@ -449,7 +449,7 @@
                 "multi-processing",
                 "multi-threading"
             ],
-            "time": "2018-03-14T23:51:13+00:00"
+            "time": "2018-03-21T14:37:51+00:00"
         },
         {
             "name": "amphp/parser",
