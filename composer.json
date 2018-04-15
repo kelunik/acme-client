@@ -13,7 +13,7 @@
     "require": {
         "php": ">=7",
         "ext-openssl": "*",
-        "amphp/process": "^0.2",
+        "amphp/process": "^0.3.3",
         "amphp/parallel": "^0.2.5",
         "kelunik/acme": "^0.5",
         "kelunik/certificate": "^1",
