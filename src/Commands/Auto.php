@@ -86,6 +86,13 @@ class Auto implements Command {
                 return self::EXIT_CONFIG_ERROR;
             }
 
+            foreach ($config['certificates'] as $certificateConfig) {
+                if (isset($certificateConfig['rekey']) && !\is_bool($certificateConfig['rekey'])) {
+                    $this->climate->error("Config file ({$configPath}) defines an invalid 'rekey' value.");
+                    return self::EXIT_CONFIG_ERROR;
+                }
+            }
+
             $concurrency = isset($config['challenge-concurrency']) ? (int) $config['challenge-concurrency'] : null;
 
             $process = new Process([
@@ -179,8 +186,7 @@ class Auto implements Command {
         $domainPathMap = $this->toDomainPathMap($certificate['paths']);
         $domains = \array_keys($domainPathMap);
         $commonName = \reset($domains);
-
-        $process = new Process([
+        $processArgs = [
             PHP_BINARY,
             $GLOBALS['argv'][0],
             'check',
@@ -192,7 +198,13 @@ class Auto implements Command {
             $commonName,
             '--names',
             \implode(',', $domains),
-        ]);
+        ];
+
+        if ($certificate['rekey'] ?? false) {
+            $processArgs[] = '--rekey';
+        }
+
+        $process = new Process($processArgs);
 
         $process->start();
         $exit = yield $process->join();

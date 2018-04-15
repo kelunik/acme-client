@@ -97,14 +97,20 @@ class Issue implements Command {
                 throw new AcmeException('Issuance failed, not all challenges could be solved.');
             }
 
-            $path = 'certs/' . $keyFile . '/' . \reset($domains) . '/key.pem';
+            $keyPath = 'certs/' . $keyFile . '/' . \reset($domains) . '/key.pem';
             $bits = $args->get('bits');
 
+            $regenerateKey = $args->get('rekey');
+
             try {
-                $key = yield $keyStore->get($path);
+                $key = yield $keyStore->get($keyPath);
             } catch (KeyStoreException $e) {
+                $regenerateKey = true;
+            }
+
+            if ($regenerateKey) {
+                $this->climate->whisper('    Generating new key pair ...');
                 $key = (new RsaKeyGenerator($bits))->generateKey();
-                $key = yield $keyStore->put($path, $key);
             }
 
             $this->climate->br();
@@ -117,6 +123,8 @@ class Issue implements Command {
 
             $path = AcmeClient\normalizePath($args->get('storage')) . '/certs/' . $keyFile;
             $certificateStore = new CertificateStore($path);
+
+            yield $keyStore->put($keyPath, $key);
             yield $certificateStore->put($certificates);
 
             $this->climate->info('    Successfully issued certificate.');
@@ -231,6 +239,11 @@ class Issue implements Command {
                 'description' => 'Number of challenges to be solved concurrently.',
                 'defaultValue' => 10,
                 'castTo' => 'int',
+            ],
+            'rekey' => [
+                'longPrefix' => 'rekey',
+                'description' => 'Regenerate the key pair even if a key pair already exists.',
+                'noValue' => true,
             ],
         ];
     }

@@ -53,7 +53,10 @@ certificates:
     # user:  User running the web server. Challenge files are world readable,
     #        but some servers might require to be owner of files they serve.
     #
+    # rekey: Regenerate certificate key pairs even if a key pair already exists.
+    #
     - bits: 4096
+      rekey: true
       paths:
         /var/www/example:
             - example.org

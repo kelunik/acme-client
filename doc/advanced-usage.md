@@ -24,7 +24,7 @@ You can separate multiple domains (`-d`) with `,`, `:` or `;`. You can separate 
 
 If you specify less paths than domains, the last one will be used for the remaining domains.
 
-Please note that Let's Encrypt has rate limits. Currently it's five certificates per domain per seven days. If you combine multiple subdomains in a single certificate, they count as just one certificate. If you just want to test things out, you can use their staging server, which has way higher rate limits by appending `--s letsencrypt:staging`.
+Please note that Let's Encrypt has rate limits. Currently it's five certificates per domain per seven days. If you combine multiple subdomains in a single certificate, they count as just one certificate. If you just want to test things out, you can use their staging server, which has way higher rate limits by appending `--server letsencrypt:staging`.
 
 ## Revoke a Certificate
 
