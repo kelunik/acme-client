@@ -20,7 +20,8 @@
         "league/climate": "^3.2",
         "rdlowrey/auryn": "^1.4.2",
         "webmozart/assert": "^1.2",
-        "symfony/yaml": "^3.0"
+        "symfony/yaml": "^3.0",
+        "amphp/log": "^1.0"
     },
     "require-dev": {
         "phpunit/phpunit": "^6",
