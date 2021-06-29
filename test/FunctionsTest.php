@@ -4,25 +4,39 @@ namespace Kelunik\AcmeClient;
 
 use PHPUnit\Framework\TestCase;
 
-class FunctionsTest extends TestCase {
-    public function testResolveServer() {
-        $this->assertSame('https://acme-v01.api.letsencrypt.org/directory', resolveServer('letsencrypt'));
-        $this->assertSame('https://acme-v01.api.letsencrypt.org/directory', resolveServer('letsencrypt:production'));
-        $this->assertSame('https://acme-staging.api.letsencrypt.org/directory', resolveServer('letsencrypt:staging'));
-        $this->assertSame('https://acme-v01.api.letsencrypt.org/directory', resolveServer('acme-v01.api.letsencrypt.org/directory'));
-        $this->assertSame('https://acme-v01.api.letsencrypt.org/directory', resolveServer('https://acme-v01.api.letsencrypt.org/directory'));
+class FunctionsTest extends TestCase
+{
+    public function testResolveServer(): void
+    {
+        $this->assertSame('https://acme-v02.api.letsencrypt.org/directory', resolveServer('letsencrypt'));
+        $this->assertSame('https://acme-v02.api.letsencrypt.org/directory', resolveServer('letsencrypt:production'));
+        $this->assertSame(
+            'https://acme-staging-v02.api.letsencrypt.org/directory',
+            resolveServer('letsencrypt:staging')
+        );
+        $this->assertSame(
+            'https://acme-v01.api.letsencrypt.org/directory',
+            resolveServer('acme-v01.api.letsencrypt.org/directory')
+        );
+        $this->assertSame(
+            'https://acme-v01.api.letsencrypt.org/directory',
+            resolveServer('https://acme-v01.api.letsencrypt.org/directory')
+        );
     }
 
-    public function testSuggestCommand() {
+    public function testSuggestCommand(): void
+    {
         $this->assertSame('acme', suggestCommand('acme!', ['acme']));
         $this->assertSame('', suggestCommand('issue', ['acme']));
     }
 
-    public function testIsPhar() {
+    public function testIsPhar(): void
+    {
         $this->assertFalse(isPhar());
     }
 
-    public function testNormalizePath() {
+    public function testNormalizePath(): void
+    {
         $this->assertSame('/etc/foobar', normalizePath('/etc/foobar'));
         $this->assertSame('/etc/foobar', normalizePath('/etc/foobar/'));
         $this->assertSame('/etc/foobar', normalizePath('/etc/foobar/'));

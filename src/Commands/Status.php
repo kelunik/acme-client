@@ -12,20 +12,40 @@ use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
 use function Amp\call;
 use function Kelunik\AcmeClient\getArgumentDescription;
+use function Kelunik\AcmeClient\normalizePath;
+use function Kelunik\AcmeClient\resolveServer;
+use function Kelunik\AcmeClient\serverToKeyname;
 
-class Status {
+class Status
+{
+    public static function getDefinition(): array
+    {
+        return [
+            'server' => getArgumentDescription('server'),
+            'storage' => getArgumentDescription('storage'),
+            'ttl' => [
+                'longPrefix' => 'ttl',
+                'description' => 'Minimum valid time in days, shows ⭮ if renewal is required.',
+                'defaultValue' => 30,
+                'castTo' => 'int',
+            ],
+        ];
+    }
+
     private $climate;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate)
+    {
         $this->climate = $climate;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         return call(function () use ($args) {
-            $server = \Kelunik\AcmeClient\resolveServer($args->get('server'));
-            $keyName = \Kelunik\AcmeClient\serverToKeyname($server);
+            $server = resolveServer($args->get('server'));
+            $keyName = serverToKeyname($server);
 
-            $storage = \Kelunik\AcmeClient\normalizePath($args->get('storage'));
+            $storage = normalizePath($args->get('storage'));
 
             try {
                 $keyStore = new KeyStore($storage);
@@ -44,15 +64,16 @@ class Status {
                 $certificateStore = new CertificateStore($storage . "/certs/{$keyName}");
 
                 /** @var array $domains */
-                $domains = yield File\scandir($storage . "/certs/{$keyName}");
+                $domains = yield File\listFiles($storage . "/certs/{$keyName}");
 
                 foreach ($domains as $domain) {
                     $pem = yield $certificateStore->get($domain);
                     $cert = new Certificate($pem);
 
-                    $symbol = \time() > $cert->getValidTo() ? '<red> ✗ </red>' : '<green> ✓ </green>';
+                    $validTo = $cert->getValidTo();
+                    $symbol = \time() > $validTo ? '<red> ✗ </red>' : '<green> ✓ </green>';
 
-                    if (\time() < $cert->getValidTo() && \time() + $args->get('ttl') * 24 * 60 * 60 > $cert->getValidTo()) {
+                    if (\time() < $validTo && \time() + $args->get('ttl') * 24 * 60 * 60 > $validTo) {
                         $symbol = '<yellow> ⭮ </yellow>';
                     }
 
@@ -62,18 +83,5 @@ class Status {
                 $this->climate->br();
             }
         });
-    }
-
-    public static function getDefinition(): array {
-        return [
-            'server' => getArgumentDescription('server'),
-            'storage' => getArgumentDescription('storage'),
-            'ttl' => [
-                'longPrefix' => 'ttl',
-                'description' => 'Minimum valid time in days, shows ⭮ if renewal is required.',
-                'defaultValue' => 30,
-                'castTo' => 'int',
-            ],
-        ];
     }
 }

@@ -14,16 +14,32 @@ use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
 use function Amp\call;
 
-class Revoke implements Command {
+class Revoke implements Command
+{
+    public static function getDefinition(): array
+    {
+        return [
+            'server' => AcmeClient\getArgumentDescription('server'),
+            'storage' => AcmeClient\getArgumentDescription('storage'),
+            'name' => [
+                'longPrefix' => 'name',
+                'description' => 'Common name of the certificate to be revoked.',
+                'required' => true,
+            ],
+        ];
+    }
+
     private $climate;
     private $acmeFactory;
 
-    public function __construct(CLImate $climate, AcmeFactory $acmeFactory) {
+    public function __construct(CLImate $climate, AcmeFactory $acmeFactory)
+    {
         $this->climate = $climate;
         $this->acmeFactory = $acmeFactory;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         return call(function () use ($args) {
             $keyStore = new KeyStore(AcmeClient\normalizePath($args->get('storage')));
 
@@ -39,7 +55,7 @@ class Revoke implements Command {
             $path = AcmeClient\normalizePath($args->get('storage')) . '/certs/' . $keyFile . '/' . $args->get('name') . '/cert.pem';
 
             try {
-                $pem = yield File\get($path);
+                $pem = yield File\read($path);
                 $cert = new Certificate($pem);
             } catch (FilesystemException $e) {
                 throw new \RuntimeException("There's no such certificate (" . $path . ')');
@@ -62,17 +78,5 @@ class Revoke implements Command {
 
             return 0;
         });
-    }
-
-    public static function getDefinition(): array {
-        return [
-            'server' => AcmeClient\getArgumentDescription('server'),
-            'storage' => AcmeClient\getArgumentDescription('storage'),
-            'name' => [
-                'longPrefix' => 'name',
-                'description' => 'Common name of the certificate to be revoked.',
-                'required' => true,
-            ],
-        ];
     }
 }

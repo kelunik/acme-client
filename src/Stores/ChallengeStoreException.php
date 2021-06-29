@@ -2,5 +2,6 @@
 
 namespace Kelunik\AcmeClient\Stores;
 
-class ChallengeStoreException extends \Exception {
+class ChallengeStoreException extends \Exception
+{
 }

@@ -21,17 +21,66 @@ use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
 use function Amp\call;
 use function Kelunik\Acme\generateKeyAuthorization;
+use function Kelunik\AcmeClient\getArgumentDescription;
+use function Kelunik\AcmeClient\normalizePath;
+use function Kelunik\AcmeClient\resolveServer;
+use function Kelunik\AcmeClient\serverToKeyname;
 
-class Issue implements Command {
+class Issue implements Command
+{
+    public static function getDefinition(): array
+    {
+        return [
+            'server' => getArgumentDescription('server'),
+            'storage' => getArgumentDescription('storage'),
+            'domains' => [
+                'prefix' => 'd',
+                'longPrefix' => 'domains',
+                'description' => 'Colon / Semicolon / Comma separated list of domains to request a certificate for.',
+                'required' => true,
+            ],
+            'path' => [
+                'prefix' => 'p',
+                'longPrefix' => 'path',
+                'description' => 'Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.',
+                'required' => true,
+            ],
+            'user' => [
+                'prefix' => 'u',
+                'longPrefix' => 'user',
+                'description' => 'User running the web server.',
+            ],
+            'bits' => [
+                'longPrefix' => 'bits',
+                'description' => 'Length of the private key in bit.',
+                'defaultValue' => 2048,
+                'castTo' => 'int',
+            ],
+            'challenge-concurrency' => [
+                'longPrefix' => 'challenge-concurrency',
+                'description' => 'Number of challenges to be solved concurrently.',
+                'defaultValue' => 10,
+                'castTo' => 'int',
+            ],
+            'rekey' => [
+                'longPrefix' => 'rekey',
+                'description' => 'Regenerate the key pair even if a key pair already exists.',
+                'noValue' => true,
+            ],
+        ];
+    }
+
     private $climate;
     private $acmeFactory;
 
-    public function __construct(CLImate $climate, AcmeFactory $acmeFactory) {
+    public function __construct(CLImate $climate, AcmeFactory $acmeFactory)
+    {
         $this->climate = $climate;
         $this->acmeFactory = $acmeFactory;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         return call(function () use ($args) {
             $user = null;
 
@@ -68,10 +117,10 @@ class Issue implements Command {
                 );
             }
 
-            $keyStore = new KeyStore(\Kelunik\AcmeClient\normalizePath($args->get('storage')));
+            $keyStore = new KeyStore(normalizePath($args->get('storage')));
 
-            $server = \Kelunik\AcmeClient\resolveServer($args->get('server'));
-            $keyFile = \Kelunik\AcmeClient\serverToKeyname($server);
+            $server = resolveServer($args->get('server'));
+            $keyFile = serverToKeyname($server);
 
             try {
                 $key = yield $keyStore->get("accounts/{$keyFile}.pem");
@@ -85,9 +134,13 @@ class Issue implements Command {
             $concurrency = \min(20, \max($args->get('challenge-concurrency'), 1));
 
             /** @var \Throwable[] $errors */
-            list($errors) = yield AcmeClient\concurrentMap($concurrency, $domains, function ($domain, $i) use ($acme, $key, $docRoots, $user) {
-                return $this->solveChallenge($acme, $key, $domain, $docRoots[$i], $user);
-            });
+            [$errors] = yield AcmeClient\concurrentMap(
+                $concurrency,
+                $domains,
+                function ($domain, $i) use ($acme, $key, $docRoots, $user) {
+                    return $this->solveChallenge($acme, $key, $domain, $docRoots[$i], $user);
+                }
+            );
 
             if ($errors) {
                 foreach ($errors as $error) {
@@ -121,7 +174,7 @@ class Issue implements Command {
             $location = yield $acme->requestCertificate($csr);
             $certificates = yield $acme->pollForCertificate($location);
 
-            $path = AcmeClient\normalizePath($args->get('storage')) . '/certs/' . $keyFile;
+            $path = normalizePath($args->get('storage')) . '/certs/' . $keyFile;
             $certificateStore = new CertificateStore($path);
 
             yield $keyStore->put($keyPath, $key);
@@ -135,8 +188,14 @@ class Issue implements Command {
         });
     }
 
-    private function solveChallenge(AcmeService $acme, PrivateKey $key, string $domain, string $path, string $user = null): \Generator {
-        list($location, $challenges) = yield $acme->requestChallenges($domain);
+    private function solveChallenge(
+        AcmeService $acme,
+        PrivateKey $key,
+        string $domain,
+        string $path,
+        string $user = null
+    ): \Generator {
+        [$location, $challenges] = yield $acme->requestChallenges($domain);
         $goodChallenges = $this->findSuitableCombination($challenges);
 
         if (empty($goodChallenges)) {
@@ -169,17 +228,17 @@ class Issue implements Command {
         }
     }
 
-    private function checkDnsRecords(array $domains): \Generator {
+    private function checkDnsRecords(array $domains): \Generator
+    {
         $promises = AcmeClient\concurrentMap(10, $domains, function (string $domain): Promise {
             return Dns\resolve($domain);
         });
 
-        list($errors) = yield Promise\any($promises);
+        [$errors] = yield Promise\any($promises);
 
         if ($errors) {
             $failedDomains = \implode(', ', \array_keys($errors));
-            $reasons = \implode("\n\n", \array_map(function ($exception) {
-                /** @var \Throwable $exception */
+            $reasons = \implode("\n\n", \array_map(static function (\Throwable $exception) {
                 return \get_class($exception) . ': ' . $exception->getMessage();
             }, $errors));
 
@@ -187,7 +246,8 @@ class Issue implements Command {
         }
     }
 
-    private function findSuitableCombination(\stdClass $response): array {
+    private function findSuitableCombination(\stdClass $response): array
+    {
         $challenges = $response->challenges ?? [];
         $combinations = $response->combinations ?? [];
         $goodChallenges = [];
@@ -205,46 +265,5 @@ class Issue implements Command {
         }
 
         return $goodChallenges;
-    }
-
-    public static function getDefinition(): array {
-        return [
-            'server' => AcmeClient\getArgumentDescription('server'),
-            'storage' => AcmeClient\getArgumentDescription('storage'),
-            'domains' => [
-                'prefix' => 'd',
-                'longPrefix' => 'domains',
-                'description' => 'Colon / Semicolon / Comma separated list of domains to request a certificate for.',
-                'required' => true,
-            ],
-            'path' => [
-                'prefix' => 'p',
-                'longPrefix' => 'path',
-                'description' => 'Colon (Unix) / Semicolon (Windows) separated list of paths to the document roots. The last one will be used for all remaining ones if fewer than the amount of domains is given.',
-                'required' => true,
-            ],
-            'user' => [
-                'prefix' => 'u',
-                'longPrefix' => 'user',
-                'description' => 'User running the web server.',
-            ],
-            'bits' => [
-                'longPrefix' => 'bits',
-                'description' => 'Length of the private key in bit.',
-                'defaultValue' => 2048,
-                'castTo' => 'int',
-            ],
-            'challenge-concurrency' => [
-                'longPrefix' => 'challenge-concurrency',
-                'description' => 'Number of challenges to be solved concurrently.',
-                'defaultValue' => 10,
-                'castTo' => 'int',
-            ],
-            'rekey' => [
-                'longPrefix' => 'rekey',
-                'description' => 'Regenerate the key pair even if a key pair already exists.',
-                'noValue' => true,
-            ],
-        ];
     }
 }

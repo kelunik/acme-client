@@ -4,3 +4,4 @@
 /vendor/
 /config.test.yml
 /.php_cs.cache
+/.phpunit.result.cache

@@ -6,15 +6,30 @@ use Amp\Promise;
 use Amp\Success;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
+use function Kelunik\AcmeClient\ellipsis;
 
-class Version implements Command {
+class Version implements Command
+{
+    public static function getDefinition(): array
+    {
+        return [
+            'deps' => [
+                'longPrefix' => 'deps',
+                'description' => 'Show also the bundled dependency versions.',
+                'noValue' => true,
+            ],
+        ];
+    }
+
     private $climate;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate)
+    {
         $this->climate = $climate;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         $version = $this->getVersion();
 
         $buildTime = $this->readFileOr('info/build.time', \time());
@@ -41,13 +56,15 @@ class Version implements Command {
         return new Success;
     }
 
-    private function getDescription($package) {
-        return \Kelunik\AcmeClient\ellipsis($package->description ?? '');
+    private function getDescription($package): string
+    {
+        return ellipsis($package->description ?? '');
     }
 
-    private function getVersion() {
+    private function getVersion(): string
+    {
         if (\file_exists(__DIR__ . '/../../.git')) {
-            $version = `git describe --tags`;
+            $version = \shell_exec("git describe --tags");
         } else {
             $version = $this->readFileOr('info/build.version', '-unknown');
         }
@@ -55,7 +72,8 @@ class Version implements Command {
         return \substr(\trim($version), 1);
     }
 
-    private function readFileOr($file, $default = '') {
+    private function readFileOr(string $file, $default = '')
+    {
         if (\file_exists(__DIR__ . '/../../' . $file)) {
             return \file_get_contents(__DIR__ . '/../../' . $file);
         }
@@ -65,15 +83,5 @@ class Version implements Command {
         }
 
         return $default;
-    }
-
-    public static function getDefinition(): array {
-        return [
-            'deps' => [
-                'longPrefix' => 'deps',
-                'description' => 'Show also the bundled dependency versions.',
-                'noValue' => true,
-            ],
-        ];
     }
 }

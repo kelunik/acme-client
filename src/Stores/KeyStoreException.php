@@ -2,5 +2,6 @@
 
 namespace Kelunik\AcmeClient\Stores;
 
-class KeyStoreException extends \Exception {
+class KeyStoreException extends \Exception
+{
 }

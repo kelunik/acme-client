@@ -11,8 +11,10 @@ use Kelunik\Acme\Crypto\PrivateKey;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
 
-class AcmeFactory {
-    public function build(string $directory, PrivateKey $keyPair): AcmeService {
+class AcmeFactory
+{
+    public function build(string $directory, PrivateKey $keyPair): AcmeService
+    {
         $logger = null;
         if (\getenv('ACME_LOG')) {
             $logger = new Logger('acme');
@@ -23,6 +25,6 @@ class AcmeFactory {
             $logger->pushHandler($handler);
         }
 
-        return new AcmeService(new AcmeClient($directory, $keyPair, null, null, $logger));
+        return new AcmeService(new AcmeClient($directory, $keyPair, null, null, null, $logger));
     }
 }

@@ -10,15 +10,43 @@ use Kelunik\Certificate\Certificate;
 use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
 use function Amp\call;
+use function Kelunik\AcmeClient\getArgumentDescription;
 
-class Check implements Command {
+class Check implements Command
+{
+    public static function getDefinition(): array
+    {
+        return [
+            'server' => getArgumentDescription('server'),
+            'storage' => getArgumentDescription('storage'),
+            'name' => [
+                'longPrefix' => 'name',
+                'description' => 'Common name of the certificate to check.',
+                'required' => true,
+            ],
+            'ttl' => [
+                'longPrefix' => 'ttl',
+                'description' => 'Minimum valid time in days.',
+                'defaultValue' => 30,
+                'castTo' => 'int',
+            ],
+            'names' => [
+                'longPrefix' => 'names',
+                'description' => 'Names that must be covered by the certificate identified based on the common name. Names have to be separated by commas.',
+                'required' => false,
+            ],
+        ];
+    }
+
     private $climate;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate)
+    {
         $this->climate = $climate;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         return call(function () use ($args) {
             $server = AcmeClient\resolveServer($args->get('server'));
             $server = AcmeClient\serverToKeyname($server);
@@ -44,7 +72,10 @@ class Check implements Command {
                 $missingNames = \array_diff($names, $cert->getNames());
 
                 if ($missingNames) {
-                    $this->climate->comment('    The following names are not covered: ' . \implode(', ', $missingNames))->br();
+                    $this->climate->comment('    The following names are not covered: ' . \implode(
+                        ', ',
+                        $missingNames
+                    ))->br();
 
                     return 1;
                 }
@@ -58,28 +89,5 @@ class Check implements Command {
 
             return 1;
         });
-    }
-
-    public static function getDefinition(): array {
-        return [
-            'server' => \Kelunik\AcmeClient\getArgumentDescription('server'),
-            'storage' => \Kelunik\AcmeClient\getArgumentDescription('storage'),
-            'name' => [
-                'longPrefix' => 'name',
-                'description' => 'Common name of the certificate to check.',
-                'required' => true,
-            ],
-            'ttl' => [
-                'longPrefix' => 'ttl',
-                'description' => 'Minimum valid time in days.',
-                'defaultValue' => 30,
-                'castTo' => 'int',
-            ],
-            'names' => [
-                'longPrefix' => 'names',
-                'description' => 'Names that must be covered by the certificate identified based on the common name. Names have to be separated by commas.',
-                'required' => false,
-            ],
-        ];
     }
 }

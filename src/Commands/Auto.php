@@ -2,7 +2,6 @@
 
 namespace Kelunik\AcmeClient\Commands;
 
-use Amp\ByteStream\Message;
 use Amp\File;
 use Amp\File\FilesystemException;
 use Amp\Process\Process;
@@ -14,32 +13,65 @@ use League\CLImate\Argument\Manager;
 use League\CLImate\CLImate;
 use Symfony\Component\Yaml\Exception\ParseException;
 use Symfony\Component\Yaml\Yaml;
+use function Amp\ByteStream\buffer;
 use function Amp\call;
 
-class Auto implements Command {
-    const EXIT_CONFIG_ERROR = 1;
-    const EXIT_SETUP_ERROR = 2;
-    const EXIT_ISSUANCE_ERROR = 3;
-    const EXIT_ISSUANCE_PARTIAL = 4;
-    const EXIT_ISSUANCE_OK = 5;
+class Auto implements Command
+{
+    private const EXIT_CONFIG_ERROR = 1;
+    private const EXIT_SETUP_ERROR = 2;
+    private const EXIT_ISSUANCE_ERROR = 3;
+    private const EXIT_ISSUANCE_PARTIAL = 4;
+    private const EXIT_ISSUANCE_OK = 5;
 
-    const STATUS_NO_CHANGE = 0;
-    const STATUS_RENEWED = 1;
+    private const STATUS_NO_CHANGE = 0;
+    private const STATUS_RENEWED = 1;
+
+    public static function getDefinition(): array
+    {
+        $server = AcmeClient\getArgumentDescription('server');
+        $storage = AcmeClient\getArgumentDescription('storage');
+
+        $server['required'] = false;
+        $storage['required'] = false;
+
+        $args = [
+            'server' => $server,
+            'storage' => $storage,
+            'config' => [
+                'prefix' => 'c',
+                'longPrefix' => 'config',
+                'description' => 'Configuration file to read.',
+                'required' => true,
+            ],
+        ];
+
+        $configPath = AcmeClient\getConfigPath();
+
+        if ($configPath) {
+            $args['config']['required'] = false;
+            $args['config']['defaultValue'] = $configPath;
+        }
+
+        return $args;
+    }
 
     private $climate;
 
-    public function __construct(CLImate $climate) {
+    public function __construct(CLImate $climate)
+    {
         $this->climate = $climate;
     }
 
-    public function execute(Manager $args): Promise {
+    public function execute(Manager $args): Promise
+    {
         return call(function () use ($args) {
             $configPath = $args->get('config');
 
             try {
                 /** @var array $config */
                 $config = Yaml::parse(
-                    yield File\get($configPath)
+                    yield File\read($configPath)
                 );
             } catch (FilesystemException $e) {
                 $this->climate->error("Config file ({$configPath}) not found.");
@@ -112,8 +144,8 @@ class Auto implements Command {
 
             if ($exit !== 0) {
                 $this->climate->error("Registration failed ({$exit})");
-                $this->climate->br()->out(yield new Message($process->getStdout()));
-                $this->climate->br()->error(yield new Message($process->getStderr()));
+                $this->climate->br()->out(yield buffer($process->getStdout()));
+                $this->climate->br()->error(yield buffer($process->getStderr()));
 
                 return self::EXIT_SETUP_ERROR;
             }
@@ -147,7 +179,10 @@ class Auto implements Command {
                 foreach ($values as $i => $value) {
                     if ($value === self::STATUS_RENEWED) {
                         $certificate = $config['certificates'][$i];
-                        $this->climate->info('Certificate for ' . \implode(', ', \array_keys($this->toDomainPathMap($certificate['paths']))) . ' successfully renewed.');
+                        $this->climate->info('Certificate for ' . \implode(
+                            ', ',
+                            \array_keys($this->toDomainPathMap($certificate['paths']))
+                        ) . ' successfully renewed.');
                     }
                 }
             }
@@ -155,7 +190,10 @@ class Auto implements Command {
             if ($status['failure'] > 0) {
                 foreach ($errors as $i => $error) {
                     $certificate = $config['certificates'][$i];
-                    $this->climate->error('Issuance for the following domains failed: ' . \implode(', ', \array_keys($this->toDomainPathMap($certificate['paths']))));
+                    $this->climate->error('Issuance for the following domains failed: ' . \implode(
+                        ', ',
+                        \array_keys($this->toDomainPathMap($certificate['paths']))
+                    ));
                     $this->climate->error("Reason: {$error}");
                 }
 
@@ -182,7 +220,12 @@ class Auto implements Command {
      * @throws AcmeException if something does wrong
      * @throws \Throwable
      */
-    private function checkAndIssue(array $certificate, string $server, string $storage, int $concurrency = null): \Generator {
+    private function checkAndIssue(
+        array $certificate,
+        string $server,
+        string $storage,
+        int $concurrency = null
+    ): \Generator {
         $domainPathMap = $this->toDomainPathMap($certificate['paths']);
         $domains = \array_keys($domainPathMap);
         $commonName = \reset($domains);
@@ -261,7 +304,8 @@ class Auto implements Command {
         throw new AcmeException("Unexpected exit code ({$exit}) for '{$process->getCommand()}'.");
     }
 
-    private function toDomainPathMap(array $paths) {
+    private function toDomainPathMap(array $paths)
+    {
         $result = [];
 
         foreach ($paths as $path => $domains) {
@@ -313,33 +357,5 @@ MESSAGE;
         }
 
         return $result;
-    }
-
-    public static function getDefinition(): array {
-        $server = AcmeClient\getArgumentDescription('server');
-        $storage = AcmeClient\getArgumentDescription('storage');
-
-        $server['required'] = false;
-        $storage['required'] = false;
-
-        $args = [
-            'server' => $server,
-            'storage' => $storage,
-            'config' => [
-                'prefix' => 'c',
-                'longPrefix' => 'config',
-                'description' => 'Configuration file to read.',
-                'required' => true,
-            ],
-        ];
-
-        $configPath = AcmeClient\getConfigPath();
-
-        if ($configPath) {
-            $args['config']['required'] = false;
-            $args['config']['defaultValue'] = $configPath;
-        }
-
-        return $args;
     }
 }

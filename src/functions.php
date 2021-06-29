@@ -12,7 +12,8 @@ use Symfony\Component\Yaml\Yaml;
 use function Amp\call;
 use function Amp\coroutine;
 
-function concurrentMap(int $concurrency, array $values, callable $functor): array {
+function concurrentMap(int $concurrency, array $values, callable $functor): array
+{
     $semaphore = new LocalSemaphore($concurrency);
 
     return \array_map(coroutine(function ($value, $key) use ($semaphore, $functor) {
@@ -36,7 +37,8 @@ function concurrentMap(int $concurrency, array $values, callable $functor): arra
  *
  * @return string suggestion or empty string if no command is similar enough
  */
-function suggestCommand(string $badCommand, array $commands, int $suggestThreshold = 70): string {
+function suggestCommand(string $badCommand, array $commands, int $suggestThreshold = 70): string
+{
     $badCommand = \strtolower($badCommand);
 
     $bestMatch = '';
@@ -63,11 +65,12 @@ function suggestCommand(string $badCommand, array $commands, int $suggestThresho
  *
  * @return string resolved URI
  */
-function resolveServer(string $uri): string {
+function resolveServer(string $uri): string
+{
     $shortcuts = [
-        'letsencrypt' => 'https://acme-v01.api.letsencrypt.org/directory',
-        'letsencrypt:production' => 'https://acme-v01.api.letsencrypt.org/directory',
-        'letsencrypt:staging' => 'https://acme-staging.api.letsencrypt.org/directory',
+        'letsencrypt' => 'https://acme-v02.api.letsencrypt.org/directory',
+        'letsencrypt:production' => 'https://acme-v02.api.letsencrypt.org/directory',
+        'letsencrypt:staging' => 'https://acme-staging-v02.api.letsencrypt.org/directory',
     ];
 
     if (isset($shortcuts[$uri])) {
@@ -94,7 +97,8 @@ function resolveServer(string $uri): string {
  *
  * @return string identifier usable as file name
  */
-function serverToKeyname(string $server): string {
+function serverToKeyname(string $server): string
+{
     $server = \substr($server, \strpos($server, '://') + 3);
 
     $keyFile = \str_replace('/', '.', $server);
@@ -109,7 +113,8 @@ function serverToKeyname(string $server): string {
  *
  * @return bool {@code true} if running as Phar, {@code false} otherwise
  */
-function isPhar(): bool {
+function isPhar(): bool
+{
     if (!\class_exists('Phar')) {
         return false;
     }
@@ -124,7 +129,8 @@ function isPhar(): bool {
  *
  * @return string normalized path
  */
-function normalizePath(string $path): string {
+function normalizePath(string $path): string
+{
     return \rtrim(\str_replace("\\", '/', $path), '/');
 }
 
@@ -133,7 +139,8 @@ function normalizePath(string $path): string {
  *
  * @return string|null Resolves to the config path or null.
  */
-function getConfigPath() {
+function getConfigPath(): ?string
+{
     $paths = isPhar() ? [\substr(\dirname(Phar::running()), \strlen('phar://')) . '/acme-client.yml'] : [];
 
     if (0 !== \stripos(PHP_OS, 'WIN')) {
@@ -164,7 +171,8 @@ function getConfigPath() {
  * @throws AcmeException if the provided acme-client.yml file is invalid
  * @throws ConfigException if the provided configuration file is invalid
  */
-function getArgumentDescription($argument): array {
+function getArgumentDescription(string $argument): array
+{
     $config = [];
 
     if ($configPath = getConfigPath()) {
@@ -229,7 +237,8 @@ function getArgumentDescription($argument): array {
  *
  * @return string binary callable, shortened based on PATH and CWD
  */
-function getBinary(): string {
+function getBinary(): string
+{
     $binary = 'bin/acme';
 
     if (isPhar()) {
@@ -265,7 +274,8 @@ function getBinary(): string {
  *
  * @return string shortened string
  */
-function ellipsis($text, $max = 70, $append = '…'): string {
+function ellipsis(string $text, int $max = 70, string $append = '…'): string
+{
     if (\strlen($text) <= $max) {
         return $text;
     }
