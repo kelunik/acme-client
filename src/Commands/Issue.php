@@ -10,6 +10,9 @@ use Kelunik\Acme\Crypto\Backend\OpensslBackend;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
 use Kelunik\Acme\Csr\OpensslCsrGenerator;
+use Kelunik\Acme\Protocol\Authorization;
+use Kelunik\Acme\Protocol\Challenge;
+use Kelunik\Acme\Protocol\Order;
 use Kelunik\Acme\Verifiers\Http01;
 use Kelunik\AcmeClient;
 use Kelunik\AcmeClient\AcmeFactory;
@@ -133,12 +136,33 @@ class Issue implements Command
             $acme = $this->acmeFactory->build($server, $key);
             $concurrency = \min(20, \max($args->get('challenge-concurrency'), 1));
 
+            /** @var Order $order */
+            $order = yield $acme->newOrder($domains);
+
             /** @var \Throwable[] $errors */
             [$errors] = yield AcmeClient\concurrentMap(
                 $concurrency,
-                $domains,
-                function ($domain, $i) use ($acme, $key, $docRoots, $user) {
-                    return $this->solveChallenge($acme, $key, $domain, $docRoots[$i], $user);
+                $order->getAuthorizationUrls(),
+                function ($authorizationUrl, $i) use ($acme, $key, $domains, $docRoots, $user) {
+                    /** @var Authorization $authorization */
+                    $authorization = yield $acme->getAuthorization($authorizationUrl);
+
+                    if ($authorization->getIdentifier()->getType() !== 'dns') {
+                        throw new AcmeException('Invalid identifier: ' . $authorization->getIdentifier()->getType());
+                    }
+
+                    $name = $authorization->getIdentifier()->getValue();
+                    if ($authorization->isWildcard()) {
+                        $name .= '*.';
+                    }
+
+                    $index = \array_search($name, $domains, true);
+                    if ($index === false) {
+                        throw new AcmeException('Unknown identifier returned: ' . $name);
+                    }
+
+                    return yield from $this->solveChallenge($acme, $key, $authorization, $domains[$i], $docRoots[$i],
+                        $user);
                 }
             );
 
@@ -149,6 +173,8 @@ class Issue implements Command
 
                 throw new AcmeException('Issuance failed, not all challenges could be solved.');
             }
+
+            yield $acme->pollForOrderReady($order->getUrl());
 
             $keyPath = 'certs/' . $keyFile . '/' . \reset($domains) . '/key.pem';
             $bits = $args->get('bits');
@@ -171,8 +197,13 @@ class Issue implements Command
 
             $csr = yield (new OpensslCsrGenerator)->generateCsr($key, $domains);
 
-            $location = yield $acme->requestCertificate($csr);
-            $certificates = yield $acme->pollForCertificate($location);
+            yield $acme->finalizeOrder($order->getFinalizationUrl(), $csr);
+            yield $acme->pollForOrderValid($order->getUrl());
+
+            /** @var Order $order */
+            $order = yield $acme->getOrder($order->getUrl());
+
+            $certificates = yield $acme->downloadCertificates($order->getCertificateUrl());
 
             $path = normalizePath($args->get('storage')) . '/certs/' . $keyFile;
             $certificateStore = new CertificateStore($path);
@@ -191,20 +222,17 @@ class Issue implements Command
     private function solveChallenge(
         AcmeService $acme,
         PrivateKey $key,
+        Authorization $authorization,
         string $domain,
         string $path,
         string $user = null
     ): \Generator {
-        [$location, $challenges] = yield $acme->requestChallenges($domain);
-        $goodChallenges = $this->findSuitableCombination($challenges);
-
-        if (empty($goodChallenges)) {
+        $httpChallenge = $this->findHttpChallenge($authorization);
+        if ($httpChallenge === null) {
             throw new AcmeException("Couldn't find any combination of challenges which this client can solve!");
         }
 
-        $challenge = $challenges->challenges[\reset($goodChallenges)];
-        $token = $challenge->token;
-
+        $token = $httpChallenge->getToken();
         if (!\preg_match('#^[a-zA-Z0-9-_]+$#', $token)) {
             throw new AcmeException('Protocol violation: Invalid Token!');
         }
@@ -219,8 +247,8 @@ class Issue implements Command
             yield $challengeStore->put($token, $payload, $user);
 
             yield (new Http01)->verifyChallenge($domain, $token, $payload);
-            yield $acme->answerChallenge($challenge->uri, $payload);
-            yield $acme->pollForChallenge($location);
+            yield $acme->finalizeChallenge($httpChallenge->getUrl());
+            yield $acme->pollForAuthorization($authorization->getUrl());
 
             $this->climate->comment("    {$domain} is now authorized.");
         } finally {
@@ -246,24 +274,16 @@ class Issue implements Command
         }
     }
 
-    private function findSuitableCombination(\stdClass $response): array
+    private function findHttpChallenge(Authorization $authorization): ?Challenge
     {
-        $challenges = $response->challenges ?? [];
-        $combinations = $response->combinations ?? [];
-        $goodChallenges = [];
+        $challenges = $authorization->getChallenges();
 
-        foreach ($challenges as $i => $challenge) {
-            if ($challenge->type === 'http-01') {
-                $goodChallenges[] = $i;
+        foreach ($challenges as $challenge) {
+            if ($challenge->getType() === 'http-01') {
+                return $challenge;
             }
         }
 
-        foreach ($goodChallenges as $i => $challenge) {
-            if (!\in_array([$challenge], $combinations, true)) {
-                unset($goodChallenges[$i]);
-            }
-        }
-
-        return $goodChallenges;
+        return null;
     }
 }

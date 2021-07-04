@@ -8,7 +8,7 @@ use Amp\Dns\Record;
 use Amp\Promise;
 use Kelunik\Acme\AcmeException;
 use Kelunik\Acme\Crypto\RsaKeyGenerator;
-use Kelunik\Acme\Domain\Registration;
+use Kelunik\Acme\Protocol\Account;
 use Kelunik\AcmeClient;
 use Kelunik\AcmeClient\AcmeFactory;
 use Kelunik\AcmeClient\Stores\KeyStore;
@@ -32,6 +32,12 @@ class Setup implements Command
                 'longPrefix' => 'email',
                 'description' => 'E-mail for important issues, will be sent to the ACME server.',
                 'required' => true,
+            ],
+            'agree-terms' => [
+                'longPrefix' => 'agree-terms',
+                'description' => 'Agree to terms of service of the configured ACME server.',
+                'defaultValue' => false,
+                'noValue' => true,
             ],
         ];
 
@@ -90,19 +96,17 @@ class Setup implements Command
 
             $this->climate->whisper('    Registering with ' . \substr($server, 8) . ' ...');
 
-            /** @var Registration $registration */
-            $registration = yield $acme->register($email);
-            $this->climate->info('    Registration successful. Contacts: ' . \implode(
-                ', ',
-                $registration->getContact()
-            ));
+            /** @var Account $account */
+            $account = yield $acme->register($email, $args->get('agree-terms'));
+            $contacts = \implode(', ', \array_map("strval", $account->getContacts()));
+            $this->climate->info('    Registration successful. Contacts: ' . $contacts);
             $this->climate->br();
 
             return 0;
         });
     }
 
-    private function checkEmail(string $email)
+    private function checkEmail(string $email): \Generator
     {
         $host = \substr($email, \strrpos($email, '@') + 1);
 

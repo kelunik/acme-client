@@ -10,21 +10,19 @@ use Kelunik\Acme\AcmeService;
 use Kelunik\Acme\Crypto\PrivateKey;
 use Monolog\Logger;
 use Monolog\Processor\PsrLogMessageProcessor;
+use function Amp\ByteStream\getStderr;
 
 class AcmeFactory
 {
     public function build(string $directory, PrivateKey $keyPair): AcmeService
     {
-        $logger = null;
-        if (\getenv('ACME_LOG')) {
-            $logger = new Logger('acme');
-            $logger->pushProcessor(new PsrLogMessageProcessor);
+        $handler = new StreamHandler(getStderr());
+        $handler->setFormatter(new ConsoleFormatter(null, null, true, true));
 
-            $handler = new StreamHandler(new ResourceOutputStream(\STDERR));
-            $handler->setFormatter(new ConsoleFormatter(null, null, true, true));
-            $logger->pushHandler($handler);
-        }
+        $logger = new Logger('acme');
+        $logger->pushProcessor(new PsrLogMessageProcessor);
+        $logger->pushHandler($handler);
 
-        return new AcmeService(new AcmeClient($directory, $keyPair, null, null, null, $logger));
+        return new AcmeService(new AcmeClient($directory, $keyPair, null, null, $logger), $logger);
     }
 }

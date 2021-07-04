@@ -1,10 +1,14 @@
 #!/usr/bin/env php
 <?php
 
+use Amp\Http\Client\HttpClientBuilder;
 use Amp\Loop;
 use Auryn\Injector;
 use Kelunik\AcmeClient\AcmeFactory;
+use Kelunik\AcmeClient\Commands\Command;
 use League\CLImate\CLImate;
+use function Kelunik\AcmeClient\getBinary;
+use function Kelunik\AcmeClient\suggestCommand;
 
 $logo = <<<LOGO
     ____ __________ ___  ___
@@ -51,7 +55,7 @@ $commands = [
     'help' => 'Print this help information.',
 ];
 
-$binary = \Kelunik\AcmeClient\getBinary();
+$binary = getBinary();
 
 $help = implode(PHP_EOL, array_map(function ($command) use ($commands) {
     $help = "  <green>{$command}</green>\n";
@@ -81,8 +85,8 @@ if (!in_array(PHP_SAPI, ['cli', 'phpdbg'], true)) {
     exit(1);
 }
 
-if (PHP_VERSION_ID < 70000) {
-    $climate->yellow("You're using an older version of PHP which is no longer supported by this client. Have a look at http://php.net/supported-versions.php and upgrade at least to PHP 7.0!");
+if (PHP_VERSION_ID < 70400) {
+    $climate->yellow("You're using an older version of PHP which is no longer supported by this client. Have a look at https://php.net/supported-versions.php and upgrade at least to PHP 7.4!");
     $climate->br(2);
 }
 
@@ -94,7 +98,7 @@ if (count($argv) === 1 || in_array($argv[1], ['-h', 'help', '--help'], true)) {
 if (!array_key_exists($argv[1], $commands)) {
     $climate->error("Unknown command '{$argv[1]}'. Use --help for a list of available commands.");
 
-    $suggestion = \Kelunik\AcmeClient\suggestCommand($argv[1], array_keys($commands));
+    $suggestion = suggestCommand($argv[1], array_keys($commands));
 
     if ($suggestion) {
         $climate->br()->out("  Did you mean '$suggestion'?");
@@ -105,7 +109,7 @@ if (!array_key_exists($argv[1], $commands)) {
     exit(1);
 }
 
-/** @var \Kelunik\AcmeClient\Commands\Command $class */
+/** @var string|Command $class */
 $class = "Kelunik\\AcmeClient\\Commands\\" . ucfirst($argv[1]);
 $definition = $class::getDefinition();
 
@@ -136,7 +140,7 @@ try {
 $injector = new Injector;
 $injector->share($climate);
 $injector->share(new AcmeFactory);
-$injector->share(new Amp\Artax\DefaultClient);
+$injector->share(HttpClientBuilder::buildDefault());
 
 $command = $injector->make($class);
 $exitCode = 1;
