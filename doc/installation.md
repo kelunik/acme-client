@@ -6,7 +6,7 @@ This is the preferred installation method for usage on a production system. You 
 
 ### Requirements
 
-* PHP 5.5+
+* PHP 7.4+
 
 ### Instructions
 
@@ -50,7 +50,7 @@ If you plan to actively develop this client, you probably don't want the Phar bu
 
 ### Requirements
 
-* PHP 5.5+
+* PHP 7.4+
 * [Composer](https://getcomposer.org/)
 
 ### Instructions
