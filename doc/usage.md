@@ -69,6 +69,8 @@ certificates:
 
 All configuration keys are optional and can be passed as arguments directly (except for `certificates` when using `acme-client auto`).
 
+Before you can issue certificates, you must create an account using `acme-client setup --agree-terms`.
+
 ## Certificate Issuance
 
 You can use `acme-client auto` to issue certificates and renew them if necessary. It uses the configuration file to
