@@ -4,8 +4,8 @@
 
 ## Requirements
 
- * PHP 7+ with OpenSSL
- * Works on Unix and Windows
+ * PHP 7.4+ with OpenSSL
+ * Works on Unix-like systems and Windows
 
 ## Documentation
 
