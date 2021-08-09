@@ -32,14 +32,14 @@ class ChallengeStore
             }
 
             if ($userInfo !== null) {
-                yield File\changeOwner($this->docroot . '/.well-known', $userInfo['uid'], -1);
-                yield File\changeOwner($this->docroot . '/.well-known/acme-challenge', $userInfo['uid'], -1);
+                yield File\changeOwner($this->docroot . '/.well-known', $userInfo['uid']);
+                yield File\changeOwner($this->docroot . '/.well-known/acme-challenge', $userInfo['uid']);
             }
 
             yield File\write("{$path}/{$token}", $payload);
 
             if ($userInfo !== null) {
-                yield File\changeOwner("{$path}/{$token}", $userInfo['uid'], -1);
+                yield File\changeOwner("{$path}/{$token}", $userInfo['uid']);
             }
 
             yield File\changePermissions("{$path}/{$token}", 0644);
