@@ -49,7 +49,7 @@ class KeyStore
 
                 yield File\createDirectoryRecursively($dir, 0755);
                 yield File\write($file, $key->toPem());
-                yield File\changeOwner($file, 0600);
+                yield File\changePermissions($file, 0600);
             } catch (FilesystemException $e) {
                 throw new KeyStoreException('Could not save key: ' . $e->getMessage(), 0, $e);
             }
