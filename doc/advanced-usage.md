@@ -5,7 +5,7 @@ Please read the document about [basic usage](./usage.md) first.
 ## Register an Account
 
 ```
-acme-client setup --email me@example.com
+acme-client setup --agree-terms --email me@example.com
 ```
 
 After a successful registration you're able to issue certificates.
