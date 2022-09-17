@@ -143,7 +143,7 @@ class Issue implements Command
             [$errors] = yield AcmeClient\concurrentMap(
                 $concurrency,
                 $order->getAuthorizationUrls(),
-                function ($authorizationUrl, $i) use ($acme, $key, $domains, $docRoots, $user) {
+                function ($authorizationUrl) use ($acme, $key, $domains, $docRoots, $user) {
                     /** @var Authorization $authorization */
                     $authorization = yield $acme->getAuthorization($authorizationUrl);
 
@@ -161,7 +161,7 @@ class Issue implements Command
                         throw new AcmeException('Unknown identifier returned: ' . $name);
                     }
 
-                    return yield from $this->solveChallenge($acme, $key, $authorization, $domains[$i], $docRoots[$i],
+                    return yield from $this->solveChallenge($acme, $key, $authorization, $name, $docRoots[$index],
                         $user);
                 }
             );
