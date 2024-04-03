@@ -161,8 +161,14 @@ class Issue implements Command
                         throw new AcmeException('Unknown identifier returned: ' . $name);
                     }
 
-                    return yield from $this->solveChallenge($acme, $key, $authorization, $name, $docRoots[$index],
-                        $user);
+                    return yield from $this->solveChallenge(
+                        $acme,
+                        $key,
+                        $authorization,
+                        $name,
+                        $docRoots[$index],
+                        $user
+                    );
                 }
             );
 

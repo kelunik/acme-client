@@ -2,7 +2,6 @@
 
 namespace Kelunik\AcmeClient;
 
-use Amp\ByteStream\ResourceOutputStream;
 use Amp\Log\ConsoleFormatter;
 use Amp\Log\StreamHandler;
 use Kelunik\Acme\AcmeClient;
